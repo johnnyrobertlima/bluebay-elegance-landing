@@ -27,16 +27,11 @@ export const fetchFilterOptions = async () => {
 
     console.log("Centros de custo disponíveis após processamento:", brands.map(b => b.value).join(", "));
 
-    // Fetch representatives
+    // Fetch representatives from BLUEBAY_REPRESENTANTE table
     const { data: reps, error: repsError } = await supabase
-      .from('vw_representantes')
-      .select('codigo_representante, nome_representante')
-      .order('nome_representante');
+      .from('BLUEBAY_REPRESENTANTE' as any)
+      .select('PES_CODIGO');
     
-    if (repsError) {
-      throw new Error(`Error fetching representatives: ${repsError.message}`);
-    }
-
     // Status values with human-readable labels
     const statuses = [
       { value: "0", label: "Em Digitação" },
@@ -46,12 +41,14 @@ export const fetchFilterOptions = async () => {
       { value: "4", label: "Cancelado" }
     ];
 
+    const representatives = repsError ? [] : (reps as any[] || []).map((r: any) => ({ 
+      value: String(r.PES_CODIGO), 
+      label: `Representante ${r.PES_CODIGO}` 
+    }));
+
     return {
       brands,
-      representatives: reps.map(r => ({ 
-        value: r.codigo_representante.toString(), 
-        label: r.nome_representante || `Representante ${r.codigo_representante}` 
-      })),
+      representatives,
       statuses
     };
   } catch (error) {

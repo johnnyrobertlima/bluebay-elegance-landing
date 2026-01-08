@@ -1,7 +1,15 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { v4 as uuidv4 } from "uuid";
 import { getItemWithMatrizFilial } from "./itemManagementService";
+
+// Simple UUID generator
+const generateUUID = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
 
 export const saveVariationGrid = async (
   itemCode: string,
@@ -32,7 +40,7 @@ export const saveVariationGrid = async (
         
         if (!exists) {
           combinations.push({
-            id: uuidv4(),
+            id: generateUUID(),
             item_codigo: itemCode,
             id_cor: color.id,
             id_tamanho: size.id,

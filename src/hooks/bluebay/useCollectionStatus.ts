@@ -1,4 +1,4 @@
-// Stub hook for Collection status
+// Hook for Collection status
 import { useState, useCallback } from "react";
 
 interface UseCollectionStatusProps {
@@ -8,41 +8,53 @@ interface UseCollectionStatusProps {
 interface CollectionRecord {
   id: string;
   clientCode: string;
+  clientName: string;
   date: string;
   collectedBy: string;
+  status: string;
 }
 
 export const useCollectionStatus = (props?: UseCollectionStatusProps) => {
-  const [collectedClients, setCollectedClients] = useState<Set<string>>(new Set());
+  const [collectedClients, setCollectedClients] = useState<string[]>([]);
   const [collectionRecords, setCollectionRecords] = useState<CollectionRecord[]>([]);
   const [showCollectedOnly, setShowCollectedOnly] = useState(false);
   
-  const handleCollectionStatusChange = useCallback((clientCode: string, collected: boolean) => {
+  const handleCollectionStatusChange = useCallback((clientCode: string, clientName: string, status: string) => {
     setCollectedClients(prev => {
-      const newSet = new Set(prev);
-      if (collected) {
-        newSet.add(clientCode);
-      } else {
-        newSet.delete(clientCode);
+      if (status === "collected" && !prev.includes(clientCode)) {
+        return [...prev, clientCode];
+      } else if (status !== "collected") {
+        return prev.filter(c => c !== clientCode);
       }
-      return newSet;
+      return prev;
     });
-  }, []);
+    
+    if (status === "collected") {
+      setCollectionRecords(prev => [
+        ...prev,
+        {
+          id: `${clientCode}-${Date.now()}`,
+          clientCode,
+          clientName,
+          date: new Date().toISOString(),
+          collectedBy: props?.userName || "Unknown",
+          status
+        }
+      ]);
+    }
+  }, [props?.userName]);
 
   const toggleShowCollected = useCallback(() => {
     setShowCollectedOnly(prev => !prev);
   }, []);
 
   const resetClientCollectionStatus = useCallback((clientCode: string) => {
-    setCollectedClients(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(clientCode);
-      return newSet;
-    });
+    setCollectedClients(prev => prev.filter(c => c !== clientCode));
+    setCollectionRecords(prev => prev.filter(r => r.clientCode !== clientCode));
   }, []);
 
   const resetAllCollectionStatus = useCallback(() => {
-    setCollectedClients(new Set());
+    setCollectedClients([]);
     setCollectionRecords([]);
   }, []);
 

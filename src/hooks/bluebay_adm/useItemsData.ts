@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { fetchItems, fetchGroups, fetchAllItems, fetchEmpresas } from "@/services/bluebay_adm/itemManagementService";
+import { fetchItems, fetchGroups, fetchEmpresas } from "@/services/bluebay_adm/itemManagementService";
 
 export const useItemsData = (
   searchTerm: string,
@@ -26,11 +26,9 @@ export const useItemsData = (
     try {
       const fetchedGroups = await fetchGroups();
       
-      // Create a Map to store unique groups based on description
-      // This is a secondary check to ensure we don't show duplicate descriptions in the dropdown
       const uniqueDescriptionsMap = new Map();
       
-      fetchedGroups.forEach(group => {
+      fetchedGroups.forEach((group: any) => {
         const descriptionKey = group.gru_descricao ? group.gru_descricao.toLowerCase().trim() : '';
         
         if (descriptionKey && !uniqueDescriptionsMap.has(descriptionKey)) {
@@ -38,12 +36,11 @@ export const useItemsData = (
         }
       });
       
-      // Convert the Map back to an array and sort by description
       const uniqueGroups = Array.from(uniqueDescriptionsMap.values())
         .sort((a, b) => (a.gru_descricao || '').localeCompare(b.gru_descricao || ''));
       
       setGroups(uniqueGroups);
-      console.log(`Loaded ${uniqueGroups.length} unique groups (filtered from ${fetchedGroups.length} total)`);
+      console.log(`Loaded ${uniqueGroups.length} unique groups`);
     } catch (error: any) {
       console.error("Error fetching groups:", error);
       toast({
@@ -72,12 +69,12 @@ export const useItemsData = (
     try {
       setIsLoading(true);
       
-      const { items: fetchedItems, count } = await fetchItems(
+      const { items: fetchedItems, totalCount: count } = await fetchItems(
+        pagination.currentPage,
+        pagination.pageSize,
         searchTerm,
         groupFilter,
-        empresaFilter,
-        pagination.currentPage,
-        pagination.pageSize
+        empresaFilter
       );
       
       setItems(fetchedItems);
@@ -101,32 +98,32 @@ export const useItemsData = (
   const loadAllItems = useCallback(async () => {
     try {
       setIsLoadingAll(true);
-      setItems([]); // Limpar itens atuais para evitar duplicação com os novos resultados
+      setItems([]);
       
       toast({
         title: "Carregando todos os itens",
-        description: "Esta operação pode levar alguns minutos para grandes volumes de dados.",
+        description: "Esta operação pode levar alguns minutos.",
         variant: "default"
       });
       
-      console.log("Iniciando carregamento de todos os itens...");
+      // Load all items with a large page size
+      const { items: allItems, totalCount: count } = await fetchItems(
+        1,
+        10000,
+        searchTerm,
+        groupFilter,
+        empresaFilter
+      );
       
-      // Usamos await para garantir que todos os itens sejam carregados antes de atualizar o estado
-      const allItems = await fetchAllItems(searchTerm, groupFilter, empresaFilter);
-      console.log(`Total final de itens carregados: ${allItems.length}`);
-      
-      // Atualiza o estado com todos os itens carregados
       setItems(allItems);
-      setTotalCount(allItems.length);
-      pagination.updateTotalCount(allItems.length);
+      setTotalCount(count);
+      pagination.updateTotalCount(count);
       
       toast({
         title: "Carregamento completo",
-        description: `Foram carregados ${allItems.length} itens no total.`,
+        description: `Foram carregados ${allItems.length} itens.`,
         variant: "default"
       });
-      
-      console.info(`Loaded all ${allItems.length} items without pagination`);
     } catch (error: any) {
       console.error("Error fetching all items:", error);
       toast({

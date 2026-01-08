@@ -9,16 +9,7 @@ interface ItemsContentProps {
   isLoading: boolean;
   onEdit: (item: any) => void;
   onDelete: (item: any) => Promise<void>;
-  pagination: {
-    currentPage: number;
-    totalPages: number;
-    goToPage: (page: number) => void;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-    goToNextPage: () => void;
-    goToPreviousPage: () => void;
-    pageSize: number;
-  };
+  pagination: any;
   totalCount: number;
 }
 

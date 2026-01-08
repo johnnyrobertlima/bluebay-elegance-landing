@@ -87,20 +87,15 @@ export const useItemGroupManagement = () => {
   const handleDeleteGroup = useCallback(async (id: string) => {
     try {
       setIsLoading(true);
-      const success = await deleteGroup(id);
+      await deleteGroup(id);
       
-      if (success) {
-        toast({
-          title: "Sucesso",
-          description: "Grupo excluído com sucesso!",
-        });
-        
-        // Refresh data to ensure consistency
-        await loadData();
-        return true;
-      } else {
-        throw new Error("Falha ao excluir grupo");
-      }
+      toast({
+        title: "Sucesso",
+        description: "Grupo excluído com sucesso!",
+      });
+      
+      await loadData();
+      return true;
     } catch (error: any) {
       console.error("Error deleting group:", error);
       toast({
@@ -141,10 +136,10 @@ export const useItemGroupManagement = () => {
     }
   }, [groups, toast]);
 
-  const handleImportGroups = useCallback(async (data: any[]) => {
+  const handleImportGroups = useCallback(async (file: File) => {
     try {
       setIsLoading(true);
-      const importedCount = await importGroupsFromExcel(data);
+      const result = await importGroupsFromExcel(file);
       
       toast({
         title: "Importação concluída",

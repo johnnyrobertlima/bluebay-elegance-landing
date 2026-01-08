@@ -66,33 +66,12 @@ ${codigo ? `^FO20,100^BCN,50,Y,N,N^FD${codigo}^FS` : ''}
     setIsLoading(true);
     
     try {
-      // Importação dinâmica da biblioteca
-      const ZebraBrowserPrintWrapper = (await import('zebra-browser-print-wrapper')).default;
-      const zebra = new ZebraBrowserPrintWrapper();
-      
-      // Obter impressora padrão
-      const printer = await zebra.getDefaultPrinter();
-      
-      if (!printer) {
-        toast.error("Nenhuma impressora Zebra encontrada. Verifique se o Zebra Browser Print está instalado e rodando.");
-        return;
-      }
-      
-      zebra.setPrinter(printer);
-      
-      // Verificar status da impressora
-      const status = await zebra.checkPrinterStatus();
-      
-      if (status.isReadyToPrint) {
-        await zebra.print(zplString);
-        toast.success("Etiqueta enviada para impressão com sucesso!");
-      } else {
-        const errors = Array.isArray(status.errors) ? status.errors : [status.errors || "Status desconhecido"];
-        toast.error(`Erro na impressora: ${errors.join(', ')}`);
-      }
+      // Copy ZPL to clipboard for manual printing
+      await navigator.clipboard.writeText(zplString);
+      toast.success("ZPL copiado para a área de transferência! Cole no software da impressora Zebra para imprimir.");
     } catch (error) {
-      console.error('Erro na impressão:', error);
-      toast.error("Erro ao conectar com a impressora. Verifique se o Zebra Browser Print está instalado e rodando.");
+      console.error('Erro ao copiar ZPL:', error);
+      toast.error("Erro ao copiar ZPL para a área de transferência.");
     } finally {
       setIsLoading(false);
     }
