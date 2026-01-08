@@ -60,7 +60,10 @@ const BluebayAdmItemGrupoManagement = () => {
   };
 
   const handleImport = async (data: any[]) => {
-    await handleImportGroups(data);
+    // Create a mock File object from the parsed data
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const file = new File([blob], 'import.json', { type: 'application/json' });
+    await handleImportGroups(file);
   };
 
   return (

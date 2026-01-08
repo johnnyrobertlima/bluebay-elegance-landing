@@ -264,10 +264,19 @@ const fetchKpiData = async (filters: {
 
     const averageDiscount = totalBeforeDiscount > 0 ? (totalDiscount / totalBeforeDiscount) * 100 : 0;
 
+    const averageTicket = orderedPieces > 0 ? totalOrders / orderedPieces : 0;
+    const totalItems = orderedPieces;
+
     return {
       totalOrders,
       totalBilled,
+      averageTicket,
       conversionRate,
+      totalItems,
+      totalPedido: totalOrders,
+      totalFaturado: totalBilled,
+      ticketMedio: averageTicket,
+      percentualFaturado: conversionRate,
       orderedPieces,
       billedPieces,
       averageDiscount
@@ -381,18 +390,18 @@ const fetchTimeSeriesData = async (filters: {
       if (!monthlyData.has(monthKey)) {
         monthlyData.set(monthKey, {
           date: monthKey,
-          ordersValue: 0,
-          billedValue: 0,
-          orderedPieces: 0,
-          billedPieces: 0
+          formattedDate: format(orderDate, 'MMM yyyy'),
+          total: 0,
+          orders: 0,
+          billed: 0
         });
       }
       
       const monthData = monthlyData.get(monthKey)!;
       // Cálculo correto usando QTDE_PEDIDA * VALOR_UNITARIO
       const orderValue = (order.QTDE_PEDIDA || 0) * (order.VALOR_UNITARIO || 0);
-      monthData.ordersValue += parseFloat(orderValue.toString());
-      monthData.orderedPieces += parseFloat((order.QTDE_PEDIDA || 0).toString());
+      monthData.orders += parseFloat(orderValue.toString());
+      monthData.total += parseFloat(orderValue.toString());
     });
 
     // Processar dados de faturamento
@@ -405,10 +414,10 @@ const fetchTimeSeriesData = async (filters: {
       if (!monthlyData.has(monthKey)) {
         monthlyData.set(monthKey, {
           date: monthKey,
-          ordersValue: 0,
-          billedValue: 0,
-          orderedPieces: 0,
-          billedPieces: 0
+          formattedDate: format(billingDate, 'MMM yyyy'),
+          total: 0,
+          orders: 0,
+          billed: 0
         });
       }
       
@@ -417,9 +426,8 @@ const fetchTimeSeriesData = async (filters: {
       // Cálculo correto usando QUANTIDADE * VALOR_UNITARIO
       const quantidade = parseFloat((item.QUANTIDADE || 0).toString());
       const valorUnitario = parseFloat((item.VALOR_UNITARIO || 0).toString());
-      monthData.billedValue += quantidade * valorUnitario;
-      
-      monthData.billedPieces += parseFloat((item.QUANTIDADE || 0).toString());
+      monthData.billed += quantidade * valorUnitario;
+      monthData.total += quantidade * valorUnitario;
     });
 
     // Converter mapa para array e ordenar por data
@@ -430,7 +438,20 @@ const fetchTimeSeriesData = async (filters: {
         return dateA.getTime() - dateB.getTime();
       });
 
-    return { monthlySeries };
+    // Return as TimeSeriesData
+    return { 
+      date: '',
+      total: monthlySeries.reduce((sum, m) => sum + m.total, 0),
+      orders: monthlySeries.reduce((sum, m) => sum + m.orders, 0),
+      billed: monthlySeries.reduce((sum, m) => sum + m.billed, 0),
+      formattedDate: '',
+      monthlySeries: monthlySeries.map(m => ({
+        month: m.date,
+        total: m.total,
+        orders: m.orders,
+        billed: m.billed
+      }))
+    };
   } catch (error) {
     console.error('Erro ao buscar dados de séries temporais:', error);
     throw error;
@@ -601,8 +622,16 @@ const fetchBrandData = async (filters: {
       paginatedItems = brandItems.slice(startIdx, endIdx);
     }
 
+    const totalOrders = paginatedItems.reduce((sum, item) => sum + item.totalOrders, 0);
+    const totalBilled = paginatedItems.reduce((sum, item) => sum + item.totalBilled, 0);
+
     return { 
-      data: { items: paginatedItems },
+      data: { 
+        brands: paginatedItems,
+        items: paginatedItems,
+        totalOrders,
+        totalBilled 
+      },
       totalCount: uniqueBrands.length
     };
   } catch (error) {
@@ -696,6 +725,11 @@ const fetchDeliveryData = async (filters: {
     const averageRemainingQuantity = totalItems > 0 ? totalRemainingQuantity / totalItems : 0;
 
     return {
+      onTimeDeliveries: totalFullyDelivered,
+      lateDeliveries: totalPartialDelivered,
+      pendingDeliveries: totalOpen,
+      averageDeliveryDays: 0,
+      deliveryRate: fullyDeliveredPercentage,
       fullyDeliveredPercentage,
       partialPercentage,
       openPercentage,

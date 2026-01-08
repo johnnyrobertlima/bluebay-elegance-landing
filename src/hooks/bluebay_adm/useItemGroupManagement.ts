@@ -140,6 +140,7 @@ export const useItemGroupManagement = () => {
     try {
       setIsLoading(true);
       const result = await importGroupsFromExcel(file);
+      const importedCount = result?.count || 0;
       
       toast({
         title: "Importação concluída",
