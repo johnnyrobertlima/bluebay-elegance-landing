@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Package, Heart, Calendar, Phone, Building2, Mail, Trash2 } from 'lucide-react';
+import { User, Package, Heart, Calendar, Phone, Building2, Mail, Trash2, Pencil } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -177,47 +178,65 @@ export default function Dashboard() {
           {/* Profile Card */}
           <Card className="shadow-card hover:shadow-elegant transition-shadow">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <User className="h-5 w-5 text-primary" />
-                Meu Perfil
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <User className="h-5 w-5 text-primary" />
+                  Meu Perfil
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate('/profile/edit')}
+                  className="h-8 w-8 text-muted-foreground hover:text-primary"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loading ? (
                 <div className="space-y-3">
+                  <Skeleton className="h-16 w-16 rounded-full" />
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="h-4 w-1/2" />
-                  <Skeleton className="h-4 w-2/3" />
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-foreground">{user?.email}</span>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-16 w-16">
+                      <AvatarImage src={profile?.avatar_url || ''} alt={profile?.full_name || 'Avatar'} />
+                      <AvatarFallback className="text-lg bg-primary/10 text-primary">
+                        {profile?.full_name
+                          ? profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                          : user?.email?.charAt(0).toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {profile?.full_name || 'Nome não informado'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{user?.email}</p>
+                    </div>
                   </div>
-                  {profile?.full_name && (
+                  <div className="space-y-2 pt-2 border-t">
+                    {profile?.company_name && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-foreground">{profile.company_name}</span>
+                      </div>
+                    )}
+                    {profile?.phone && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-foreground">{profile.phone}</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 text-sm">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-foreground">{profile.full_name}</span>
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">
+                        Cliente desde {profile?.created_at ? formatDate(profile.created_at) : '—'}
+                      </span>
                     </div>
-                  )}
-                  {profile?.company_name && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-foreground">{profile.company_name}</span>
-                    </div>
-                  )}
-                  {profile?.phone && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-foreground">{profile.phone}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">
-                      Cliente desde {profile?.created_at ? formatDate(profile.created_at) : '—'}
-                    </span>
                   </div>
                 </div>
               )}
