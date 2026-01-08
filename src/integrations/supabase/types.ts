@@ -14,6 +14,531 @@ export type Database = {
   }
   public: {
     Tables: {
+      bluebay_empresa: {
+        Row: {
+          created_at: string | null
+          id: string
+          nome: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          nome: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      BLUEBAY_ESTOQUE: {
+        Row: {
+          COMPRADO: number | null
+          DISPONIVEL: number | null
+          ENTROU: number | null
+          FILIAL: number
+          FISICO: number | null
+          ITEM_CODIGO: string
+          LIMITE: number | null
+          LOCAL: number
+          MATRIZ: number
+          RESERVADO: number | null
+          SUBLOCAL: string
+        }
+        Insert: {
+          COMPRADO?: number | null
+          DISPONIVEL?: number | null
+          ENTROU?: number | null
+          FILIAL: number
+          FISICO?: number | null
+          ITEM_CODIGO: string
+          LIMITE?: number | null
+          LOCAL: number
+          MATRIZ: number
+          RESERVADO?: number | null
+          SUBLOCAL: string
+        }
+        Update: {
+          COMPRADO?: number | null
+          DISPONIVEL?: number | null
+          ENTROU?: number | null
+          FILIAL?: number
+          FISICO?: number | null
+          ITEM_CODIGO?: string
+          LIMITE?: number | null
+          LOCAL?: number
+          MATRIZ?: number
+          RESERVADO?: number | null
+          SUBLOCAL?: string
+        }
+        Relationships: []
+      }
+      BLUEBAY_FATURAMENTO: {
+        Row: {
+          DATA_EMISSAO: string | null
+          FILIAL: number
+          ID_EF_DOCFISCAL: number
+          ID_EF_DOCFISCAL_ITEM: number
+          ITEM_CODIGO: string | null
+          MATRIZ: number
+          MPED_NUMORDEM: number | null
+          NOTA: string | null
+          PED_ANOBASE: number | null
+          PED_NUMPEDIDO: string | null
+          PES_CODIGO: number | null
+          QUANTIDADE: number | null
+          STATUS: string | null
+          TIPO: string | null
+          TRANSACAO: number | null
+          VALOR_DESCONTO: number | null
+          VALOR_NOTA: number | null
+          VALOR_UNITARIO: number | null
+        }
+        Insert: {
+          DATA_EMISSAO?: string | null
+          FILIAL: number
+          ID_EF_DOCFISCAL: number
+          ID_EF_DOCFISCAL_ITEM: number
+          ITEM_CODIGO?: string | null
+          MATRIZ: number
+          MPED_NUMORDEM?: number | null
+          NOTA?: string | null
+          PED_ANOBASE?: number | null
+          PED_NUMPEDIDO?: string | null
+          PES_CODIGO?: number | null
+          QUANTIDADE?: number | null
+          STATUS?: string | null
+          TIPO?: string | null
+          TRANSACAO?: number | null
+          VALOR_DESCONTO?: number | null
+          VALOR_NOTA?: number | null
+          VALOR_UNITARIO?: number | null
+        }
+        Update: {
+          DATA_EMISSAO?: string | null
+          FILIAL?: number
+          ID_EF_DOCFISCAL?: number
+          ID_EF_DOCFISCAL_ITEM?: number
+          ITEM_CODIGO?: string | null
+          MATRIZ?: number
+          MPED_NUMORDEM?: number | null
+          NOTA?: string | null
+          PED_ANOBASE?: number | null
+          PED_NUMPEDIDO?: string | null
+          PES_CODIGO?: number | null
+          QUANTIDADE?: number | null
+          STATUS?: string | null
+          TIPO?: string | null
+          TRANSACAO?: number | null
+          VALOR_DESCONTO?: number | null
+          VALOR_NOTA?: number | null
+          VALOR_UNITARIO?: number | null
+        }
+        Relationships: []
+      }
+      bluebay_grupo_item: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          empresa_id: string | null
+          gru_codigo: string
+          gru_descricao: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          empresa_id?: string | null
+          gru_codigo: string
+          gru_descricao: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          empresa_id?: string | null
+          gru_codigo?: string
+          gru_descricao?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bluebay_grupo_item_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "bluebay_empresa"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      BLUEBAY_ITEM: {
+        Row: {
+          ativo: boolean | null
+          CODIGOAUX: string | null
+          DATACADASTRO: string | null
+          DESCRICAO: string | null
+          empresa: string | null
+          estacao: string | null
+          faixa_etaria: string | null
+          FILIAL: number
+          genero: string | null
+          GRU_CODIGO: string | null
+          GRU_DESCRICAO: string | null
+          id_marca: string | null
+          id_subcategoria: string | null
+          ITEM_CODIGO: string
+          MATRIZ: number
+          ncm: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          CODIGOAUX?: string | null
+          DATACADASTRO?: string | null
+          DESCRICAO?: string | null
+          empresa?: string | null
+          estacao?: string | null
+          faixa_etaria?: string | null
+          FILIAL: number
+          genero?: string | null
+          GRU_CODIGO?: string | null
+          GRU_DESCRICAO?: string | null
+          id_marca?: string | null
+          id_subcategoria?: string | null
+          ITEM_CODIGO: string
+          MATRIZ: number
+          ncm?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          CODIGOAUX?: string | null
+          DATACADASTRO?: string | null
+          DESCRICAO?: string | null
+          empresa?: string | null
+          estacao?: string | null
+          faixa_etaria?: string | null
+          FILIAL?: number
+          genero?: string | null
+          GRU_CODIGO?: string | null
+          GRU_DESCRICAO?: string | null
+          id_marca?: string | null
+          id_subcategoria?: string | null
+          ITEM_CODIGO?: string
+          MATRIZ?: number
+          ncm?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "BLUEBAY_ITEM_id_marca_fkey"
+            columns: ["id_marca"]
+            isOneToOne: false
+            referencedRelation: "Marca"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "BLUEBAY_ITEM_id_subcategoria_fkey"
+            columns: ["id_subcategoria"]
+            isOneToOne: false
+            referencedRelation: "SubCategoria"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      BLUEBAY_ITEM_VARIACAO: {
+        Row: {
+          created_at: string | null
+          ean: string | null
+          filial: number
+          id: string
+          id_cor: string | null
+          id_tamanho: string | null
+          item_codigo: string
+          matriz: number
+          quantidade: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          ean?: string | null
+          filial: number
+          id?: string
+          id_cor?: string | null
+          id_tamanho?: string | null
+          item_codigo: string
+          matriz: number
+          quantidade?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          ean?: string | null
+          filial?: number
+          id?: string
+          id_cor?: string | null
+          id_tamanho?: string | null
+          item_codigo?: string
+          matriz?: number
+          quantidade?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "BLUEBAY_ITEM_VARIACAO_id_cor_fkey"
+            columns: ["id_cor"]
+            isOneToOne: false
+            referencedRelation: "Cor"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "BLUEBAY_ITEM_VARIACAO_id_tamanho_fkey"
+            columns: ["id_tamanho"]
+            isOneToOne: false
+            referencedRelation: "Tamanho"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "BLUEBAY_ITEM_VARIACAO_item_codigo_matriz_filial_fkey"
+            columns: ["item_codigo", "matriz", "filial"]
+            isOneToOne: false
+            referencedRelation: "BLUEBAY_ITEM"
+            referencedColumns: ["ITEM_CODIGO", "MATRIZ", "FILIAL"]
+          },
+        ]
+      }
+      BLUEBAY_PEDIDO: {
+        Row: {
+          CENTROCUSTO: string | null
+          DATA_PEDIDO: string | null
+          FILIAL: number
+          ITEM_CODIGO: string | null
+          MATRIZ: number
+          MPED_NUMORDEM: number
+          PED_ANOBASE: number
+          PED_NUMPEDIDO: string
+          PEDIDO: string | null
+          PEDIDO_CLIENTE: string | null
+          PEDIDO_OUTRO: string | null
+          PES_CODIGO: number | null
+          QTDE_ENTREGUE: number | null
+          QTDE_PEDIDA: number | null
+          QTDE_SALDO: number | null
+          REPRESENTANTE: number | null
+          STATUS: string | null
+          TOTAL_PRODUTO: number | null
+          VALOR_UNITARIO: number | null
+        }
+        Insert: {
+          CENTROCUSTO?: string | null
+          DATA_PEDIDO?: string | null
+          FILIAL: number
+          ITEM_CODIGO?: string | null
+          MATRIZ: number
+          MPED_NUMORDEM: number
+          PED_ANOBASE: number
+          PED_NUMPEDIDO: string
+          PEDIDO?: string | null
+          PEDIDO_CLIENTE?: string | null
+          PEDIDO_OUTRO?: string | null
+          PES_CODIGO?: number | null
+          QTDE_ENTREGUE?: number | null
+          QTDE_PEDIDA?: number | null
+          QTDE_SALDO?: number | null
+          REPRESENTANTE?: number | null
+          STATUS?: string | null
+          TOTAL_PRODUTO?: number | null
+          VALOR_UNITARIO?: number | null
+        }
+        Update: {
+          CENTROCUSTO?: string | null
+          DATA_PEDIDO?: string | null
+          FILIAL?: number
+          ITEM_CODIGO?: string | null
+          MATRIZ?: number
+          MPED_NUMORDEM?: number
+          PED_ANOBASE?: number
+          PED_NUMPEDIDO?: string
+          PEDIDO?: string | null
+          PEDIDO_CLIENTE?: string | null
+          PEDIDO_OUTRO?: string | null
+          PES_CODIGO?: number | null
+          QTDE_ENTREGUE?: number | null
+          QTDE_PEDIDA?: number | null
+          QTDE_SALDO?: number | null
+          REPRESENTANTE?: number | null
+          STATUS?: string | null
+          TOTAL_PRODUTO?: number | null
+          VALOR_UNITARIO?: number | null
+        }
+        Relationships: []
+      }
+      BLUEBAY_PESSOA: {
+        Row: {
+          APELIDO: string | null
+          BAIRRO: string | null
+          CATEGORIA: string | null
+          CEP: string | null
+          CIDADE: string | null
+          CNPJCPF: string | null
+          COMPLEMENTO: string | null
+          DATACADASTRO: string | null
+          EMAIL: string | null
+          ENDERECO: string | null
+          fator_correcao: number | null
+          INSCRICAO_ESTADUAL: string | null
+          NOME_CATEGORIA: string | null
+          NUMERO: string | null
+          PES_CODIGO: number
+          RAZAOSOCIAL: string | null
+          TELEFONE: string | null
+          UF: string | null
+          volume_saudavel_faturamento: number | null
+        }
+        Insert: {
+          APELIDO?: string | null
+          BAIRRO?: string | null
+          CATEGORIA?: string | null
+          CEP?: string | null
+          CIDADE?: string | null
+          CNPJCPF?: string | null
+          COMPLEMENTO?: string | null
+          DATACADASTRO?: string | null
+          EMAIL?: string | null
+          ENDERECO?: string | null
+          fator_correcao?: number | null
+          INSCRICAO_ESTADUAL?: string | null
+          NOME_CATEGORIA?: string | null
+          NUMERO?: string | null
+          PES_CODIGO: number
+          RAZAOSOCIAL?: string | null
+          TELEFONE?: string | null
+          UF?: string | null
+          volume_saudavel_faturamento?: number | null
+        }
+        Update: {
+          APELIDO?: string | null
+          BAIRRO?: string | null
+          CATEGORIA?: string | null
+          CEP?: string | null
+          CIDADE?: string | null
+          CNPJCPF?: string | null
+          COMPLEMENTO?: string | null
+          DATACADASTRO?: string | null
+          EMAIL?: string | null
+          ENDERECO?: string | null
+          fator_correcao?: number | null
+          INSCRICAO_ESTADUAL?: string | null
+          NOME_CATEGORIA?: string | null
+          NUMERO?: string | null
+          PES_CODIGO?: number
+          RAZAOSOCIAL?: string | null
+          TELEFONE?: string | null
+          UF?: string | null
+          volume_saudavel_faturamento?: number | null
+        }
+        Relationships: []
+      }
+      BLUEBAY_REPRESENTANTE: {
+        Row: {
+          PES_CODIGO: number
+        }
+        Insert: {
+          PES_CODIGO: number
+        }
+        Update: {
+          PES_CODIGO?: number
+        }
+        Relationships: []
+      }
+      BLUEBAY_TITULO: {
+        Row: {
+          ANOBASE: number
+          DTEMISSAO: string | null
+          DTPAGTO: string | null
+          DTVENCIMENTO: string | null
+          DTVENCTO: string | null
+          FILIAL: number
+          MATRIZ: number
+          NUMDOCUMENTO: string | null
+          NUMLCTO: number
+          NUMNOTA: number | null
+          PES_CODIGO: string | null
+          STATUS: string | null
+          TIPO: string
+          VLRABATIMENTO: number | null
+          VLRDESCONTO: number | null
+          VLRSALDO: number | null
+          VLRTITULO: number | null
+        }
+        Insert: {
+          ANOBASE: number
+          DTEMISSAO?: string | null
+          DTPAGTO?: string | null
+          DTVENCIMENTO?: string | null
+          DTVENCTO?: string | null
+          FILIAL: number
+          MATRIZ: number
+          NUMDOCUMENTO?: string | null
+          NUMLCTO: number
+          NUMNOTA?: number | null
+          PES_CODIGO?: string | null
+          STATUS?: string | null
+          TIPO: string
+          VLRABATIMENTO?: number | null
+          VLRDESCONTO?: number | null
+          VLRSALDO?: number | null
+          VLRTITULO?: number | null
+        }
+        Update: {
+          ANOBASE?: number
+          DTEMISSAO?: string | null
+          DTPAGTO?: string | null
+          DTVENCIMENTO?: string | null
+          DTVENCTO?: string | null
+          FILIAL?: number
+          MATRIZ?: number
+          NUMDOCUMENTO?: string | null
+          NUMLCTO?: number
+          NUMNOTA?: number | null
+          PES_CODIGO?: string | null
+          STATUS?: string | null
+          TIPO?: string
+          VLRABATIMENTO?: number | null
+          VLRDESCONTO?: number | null
+          VLRSALDO?: number | null
+          VLRTITULO?: number | null
+        }
+        Relationships: []
+      }
+      Cor: {
+        Row: {
+          codigo_hex: string | null
+          created_at: string | null
+          id: string
+          nome: string
+          updated_at: string | null
+        }
+        Insert: {
+          codigo_hex?: string | null
+          created_at?: string | null
+          id?: string
+          nome: string
+          updated_at?: string | null
+        }
+        Update: {
+          codigo_hex?: string | null
+          created_at?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       favorites: {
         Row: {
           created_at: string
@@ -42,6 +567,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      Marca: {
+        Row: {
+          created_at: string | null
+          id: string
+          nome: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          nome: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       order_items: {
         Row: {
@@ -178,6 +724,51 @@ export type Database = {
           id?: string
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      SubCategoria: {
+        Row: {
+          created_at: string | null
+          id: string
+          nome: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          nome: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      Tamanho: {
+        Row: {
+          created_at: string | null
+          id: string
+          nome: string
+          ordem: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          nome: string
+          ordem?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          nome?: string
+          ordem?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }

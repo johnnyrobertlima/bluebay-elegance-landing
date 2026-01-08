@@ -264,7 +264,7 @@ export const ProductSizeGrid = ({
                             onCheckedChange={() => handleToggleCell(color.id, size.id)}
                           />
                           {isExisting && (
-                            <Badge variant="success" className="mt-1 text-xs">Existe</Badge>
+                            <Badge variant="secondary" className="mt-1 text-xs">Existe</Badge>
                           )}
                         </div>
                       </TableCell>
