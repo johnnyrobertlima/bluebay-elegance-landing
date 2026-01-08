@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, User } from "lucide-react";
+import { Menu, X, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -24,6 +26,11 @@ const Header = () => {
     { href: "/feminino", label: "Feminino" },
     { href: "/sobre", label: "Sobre Nós" },
   ];
+
+  const handleSignOut = async () => {
+    await signOut();
+    setIsMobileMenuOpen(false);
+  };
 
   return (
     <header
@@ -63,16 +70,33 @@ const Header = () => {
 
           {/* Actions */}
           <div className="flex items-center space-x-4">
-            <Link to="/login">
-              <Button
-                variant="outline"
-                size="sm"
-                className="hidden sm:flex items-center gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300"
-              >
-                <User className="h-4 w-4" />
-                Entrar
-              </Button>
-            </Link>
+            {user ? (
+              <div className="hidden sm:flex items-center gap-3">
+                <span className="font-body text-sm text-foreground/80">
+                  {user.email}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSignOut}
+                  className="flex items-center gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sair
+                </Button>
+              </div>
+            ) : (
+              <Link to="/auth">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="hidden sm:flex items-center gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                >
+                  <User className="h-4 w-4" />
+                  Entrar
+                </Button>
+              </Link>
+            )}
 
             {/* Mobile Menu Button */}
             <button
@@ -112,16 +136,33 @@ const Header = () => {
                 {link.label}
               </Link>
             ))}
-            <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full flex items-center justify-center gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-              >
-                <User className="h-4 w-4" />
-                Entrar
-              </Button>
-            </Link>
+            {user ? (
+              <>
+                <span className="font-body text-sm text-foreground/80 py-2">
+                  {user.email}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSignOut}
+                  className="w-full flex items-center justify-center gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sair
+                </Button>
+              </>
+            ) : (
+              <Link to="/auth" onClick={() => setIsMobileMenuOpen(false)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full flex items-center justify-center gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                >
+                  <User className="h-4 w-4" />
+                  Entrar
+                </Button>
+              </Link>
+            )}
           </nav>
         </div>
       </div>
