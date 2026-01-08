@@ -24,12 +24,12 @@ export interface ClientDebtSummary {
   PES_CODIGO: string;
   CLIENTE_NOME: string;
   CLIENTE_EMAIL?: string;
-  totalTitulos: number;
-  totalVencido: number;
-  totalAVencer: number;
-  titulosVencidos: number;
-  titulosAVencer: number;
-  diasAtraso: number;
+  totalTitulos?: number;
+  totalVencido?: number;
+  totalAVencer?: number;
+  titulosVencidos?: number;
+  titulosAVencer?: number;
+  diasAtraso?: number;
   ultimoVencimento?: string;
   TOTAL_SALDO: number;
   QUANTIDADE_TITULOS: number;
