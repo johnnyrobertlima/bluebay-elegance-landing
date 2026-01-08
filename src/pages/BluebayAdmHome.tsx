@@ -1,14 +1,55 @@
 
+import { Link } from "react-router-dom";
 import { BluebayAdmMenu } from "@/components/bluebay_adm/BluebayAdmMenu";
 import { BluebayAdmBanner } from "@/components/bluebay_adm/BluebayAdmBanner";
 import { ServiceCard } from "@/components/bluebay_adm/ServiceCard";
 import { 
   FileText, BarChart2, Users, Wallet, ClipboardCheck, ShoppingBag, 
   Receipt, Package, ShoppingCart, TrendingUp, PackageCheck, Tag, Group,
-  PieChart
+  PieChart, Zap, ArrowRight
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const BluebayAdmHome = () => {
+  const quickAccess = [
+    {
+      title: "Dashboard",
+      icon: PieChart,
+      path: "/client-area/bluebay_adm/dashboard_comercial",
+      color: "from-blue-500 to-blue-600"
+    },
+    {
+      title: "Estoque vs Vendas",
+      icon: TrendingUp,
+      path: "/client-area/bluebay_adm/stock-sales-analytics",
+      color: "from-cyan-500 to-cyan-600"
+    },
+    {
+      title: "Faturamento",
+      icon: Wallet,
+      path: "/client-area/bluebay_adm/financial",
+      color: "from-amber-500 to-amber-600"
+    },
+    {
+      title: "Financeiro",
+      icon: Receipt,
+      path: "/client-area/bluebay_adm/financeiromanager",
+      color: "from-indigo-500 to-indigo-600"
+    },
+    {
+      title: "Pedidos",
+      icon: ShoppingBag,
+      path: "/client-area/bluebay_adm/pedidos",
+      color: "from-emerald-500 to-emerald-600"
+    },
+    {
+      title: "Clientes",
+      icon: Users,
+      path: "/client-area/bluebay_adm/clients",
+      color: "from-green-500 to-green-600"
+    },
+  ];
+
   const services = [
     {
       title: "Dashboard Comercial",
@@ -141,20 +182,52 @@ const BluebayAdmHome = () => {
               Acesse as ferramentas e serviços disponíveis para gerenciamento completo dos seus dados comerciais, financeiros e operacionais.
             </p>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {services.map((service, index) => (
-              <ServiceCard
-                key={index}
-                title={service.title}
-                description={service.description}
-                details={service.details}
-                icon={service.icon}
-                iconColor={service.iconColor}
-                path={service.path}
-                badge={service.badge}
-              />
-            ))}
+
+          {/* Quick Access Section */}
+          <div className="mb-10">
+            <div className="flex items-center gap-2 mb-4">
+              <Zap className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold text-foreground">Acesso Rápido</h2>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+              {quickAccess.map((item, index) => (
+                <Link
+                  key={index}
+                  to={item.path}
+                  className="group flex flex-col items-center p-4 rounded-xl bg-card border border-border hover:border-primary/40 hover:shadow-md transition-all duration-200"
+                >
+                  <div className={cn(
+                    "w-12 h-12 rounded-xl flex items-center justify-center mb-3 bg-gradient-to-br text-white shadow-sm group-hover:scale-110 transition-transform",
+                    item.color
+                  )}>
+                    <item.icon className="h-6 w-6" />
+                  </div>
+                  <span className="text-sm font-medium text-center text-foreground group-hover:text-primary transition-colors">
+                    {item.title}
+                  </span>
+                  <ArrowRight className="h-4 w-4 mt-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* All Services Section */}
+          <div>
+            <h2 className="text-lg font-semibold text-foreground mb-4">Todos os Módulos</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {services.map((service, index) => (
+                <ServiceCard
+                  key={index}
+                  title={service.title}
+                  description={service.description}
+                  details={service.details}
+                  icon={service.icon}
+                  iconColor={service.iconColor}
+                  path={service.path}
+                  badge={service.badge}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>
