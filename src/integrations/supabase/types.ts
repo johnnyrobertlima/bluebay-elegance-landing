@@ -774,10 +774,79 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      bluebay_view_faturamento_resumo: {
+        Row: {
+          DESCRICAO: string | null
+          GRU_DESCRICAO: string | null
+          ITEM_CODIGO: string | null
+          media_valor_unitario: number | null
+          primeira_venda: string | null
+          total_quantidade: number | null
+          total_registros: number | null
+          total_valor: number | null
+          ultima_venda: string | null
+        }
+        Relationships: []
+      }
+      vw_representantes: {
+        Row: {
+          APELIDO: string | null
+          codigo_representante: number | null
+          EMAIL: string | null
+          nome_representante: string | null
+          TELEFONE: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      get_bluebay_faturamento: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          DATA_EMISSAO: string
+          FILIAL: number
+          ID_EF_DOCFISCAL: number
+          ID_EF_DOCFISCAL_ITEM: number
+          ITEM_CODIGO: string
+          MATRIZ: number
+          MPED_NUMORDEM: number
+          NOTA: string
+          PED_ANOBASE: number
+          PED_NUMPEDIDO: string
+          PES_CODIGO: number
+          QUANTIDADE: number
+          STATUS: string
+          TIPO: string
+          TRANSACAO: number
+          VALOR_DESCONTO: number
+          VALOR_NOTA: number
+          VALOR_UNITARIO: number
+        }[]
+      }
+      get_stock_sales_analytics: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          CUSTO_MEDIO: number
+          DATA_ULTIMA_VENDA: string
+          DATACADASTRO: string
+          DESCRICAO: string
+          DIAS_COBERTURA: number
+          DISPONIVEL: number
+          ENTROU: number
+          FISICO: number
+          GIRO_ESTOQUE: number
+          GRU_DESCRICAO: string
+          ITEM_CODIGO: string
+          LIMITE: number
+          PERCENTUAL_ESTOQUE_VENDIDO: number
+          PRECO_MEDIO: number
+          PRODUTO_NOVO: boolean
+          QTD_VENDIDA: number
+          RANKING: number
+          RESERVADO: number
+          VALOR_TOTAL_VENDIDO: number
+        }[]
+      }
     }
     Enums: {
       order_status:
