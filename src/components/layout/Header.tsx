@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, User, LogOut, LayoutDashboard } from "lucide-react";
+import { Menu, X, User, LogOut, LayoutDashboard, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,7 +10,7 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -72,6 +72,17 @@ const Header = () => {
           <div className="flex items-center space-x-4">
             {user ? (
               <div className="hidden sm:flex items-center gap-3">
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate('/admin')}
+                    className="flex items-center gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Shield className="h-4 w-4" />
+                    Admin
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -123,7 +134,7 @@ const Header = () => {
         <div
           className={cn(
             "lg:hidden overflow-hidden transition-all duration-300",
-            isMobileMenuOpen ? "max-h-96 pb-6" : "max-h-0"
+            isMobileMenuOpen ? "max-h-[500px] pb-6" : "max-h-0"
           )}
         >
           <nav className="flex flex-col space-y-4 pt-4 border-t border-border">
@@ -144,6 +155,16 @@ const Header = () => {
             ))}
             {user ? (
               <>
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="font-body text-sm font-medium tracking-wide text-destructive hover:text-destructive py-2 flex items-center gap-2"
+                  >
+                    <Shield className="h-4 w-4" />
+                    Painel Admin
+                  </Link>
+                )}
                 <Link
                   to="/dashboard"
                   onClick={() => setIsMobileMenuOpen(false)}
