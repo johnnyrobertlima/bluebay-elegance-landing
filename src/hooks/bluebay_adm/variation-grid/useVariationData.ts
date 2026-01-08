@@ -3,10 +3,35 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getItemWithMatrizFilial } from "@/services/bluebay_adm/itemManagementService";
 
+interface Color {
+  id: string;
+  nome: string;
+  codigo_hex?: string;
+}
+
+interface Size {
+  id: string;
+  nome: string;
+  ordem?: number;
+}
+
+interface Variation {
+  id: string;
+  item_codigo: string;
+  color: Color | null;
+  size: Size | null;
+  quantidade: number | null;
+  ean: string | null;
+  matriz: number;
+  filial: number;
+  id_cor: string | null;
+  id_tamanho: string | null;
+}
+
 export const useVariationData = (itemCode: string) => {
-  const [colors, setColors] = useState<any[]>([]);
-  const [sizes, setSizes] = useState<any[]>([]);
-  const [existingVariations, setExistingVariations] = useState<any[]>([]);
+  const [colors, setColors] = useState<Color[]>([]);
+  const [sizes, setSizes] = useState<Size[]>([]);
+  const [existingVariations, setExistingVariations] = useState<Variation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingItem, setIsCheckingItem] = useState(true);
   const [itemExists, setItemExists] = useState(false);
@@ -48,12 +73,12 @@ export const useVariationData = (itemCode: string) => {
       
       try {
         const { data, error } = await supabase
-          .from("Cor")
-          .select("*")
+          .from("Cor" as any)
+          .select("id, nome, codigo_hex")
           .order("nome");
           
         if (error) throw error;
-        setColors(data || []);
+        setColors((data as unknown as Color[]) || []);
       } catch (error) {
         console.error("Error loading colors:", error);
         setColors([]);
@@ -70,12 +95,12 @@ export const useVariationData = (itemCode: string) => {
       
       try {
         const { data, error } = await supabase
-          .from("Tamanho")
-          .select("*")
+          .from("Tamanho" as any)
+          .select("id, nome, ordem")
           .order("ordem");
           
         if (error) throw error;
-        setSizes(data || []);
+        setSizes((data as unknown as Size[]) || []);
       } catch (error) {
         console.error("Error loading sizes:", error);
         setSizes([]);
@@ -95,7 +120,7 @@ export const useVariationData = (itemCode: string) => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from("BLUEBAY_ITEM_VARIACAO")
+        .from("BLUEBAY_ITEM_VARIACAO" as any)
         .select(`
           id,
           item_codigo,
@@ -123,7 +148,7 @@ export const useVariationData = (itemCode: string) => {
       if (error) throw error;
       
       // Organize data in a cleaner format
-      const formattedVariations = (data || []).map((variation) => ({
+      const formattedVariations = ((data as any[]) || []).map((variation: any) => ({
         id: variation.id,
         item_codigo: variation.item_codigo,
         color: variation.Cor,

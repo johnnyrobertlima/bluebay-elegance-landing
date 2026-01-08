@@ -22,12 +22,12 @@ export const useProductData = () => {
   const fetchSubcategories = async () => {
     try {
       const { data, error } = await supabase
-        .from("SubCategoria")
-        .select("*")
+        .from("SubCategoria" as any)
+        .select("id, nome")
         .order("nome");
 
       if (error) throw error;
-      setSubcategories(data || []);
+      setSubcategories((data as unknown as Subcategory[]) || []);
     } catch (error: any) {
       console.error("Error fetching subcategories:", error);
       toast({
@@ -41,12 +41,12 @@ export const useProductData = () => {
   const fetchBrands = async () => {
     try {
       const { data, error } = await supabase
-        .from("Marca")
-        .select("*")
+        .from("Marca" as any)
+        .select("id, nome")
         .order("nome");
 
       if (error) throw error;
-      setBrands(data || []);
+      setBrands((data as unknown as Brand[]) || []);
     } catch (error: any) {
       console.error("Error fetching brands:", error);
       toast({
@@ -60,7 +60,7 @@ export const useProductData = () => {
   const addSubcategory = async (name: string) => {
     try {
       const { data, error } = await supabase
-        .from("SubCategoria")
+        .from("SubCategoria" as any)
         .insert([{ nome: name }])
         .select();
 
@@ -73,7 +73,7 @@ export const useProductData = () => {
       
       // Refresh the subcategories
       fetchSubcategories();
-      return data[0];
+      return (data as unknown as Subcategory[])[0];
     } catch (error: any) {
       console.error("Error adding subcategory:", error);
       toast({
@@ -88,7 +88,7 @@ export const useProductData = () => {
   const addBrand = async (name: string) => {
     try {
       const { data, error } = await supabase
-        .from("Marca")
+        .from("Marca" as any)
         .insert([{ nome: name }])
         .select();
 
@@ -101,7 +101,7 @@ export const useProductData = () => {
       
       // Refresh the brands
       fetchBrands();
-      return data[0];
+      return (data as unknown as Brand[])[0];
     } catch (error: any) {
       console.error("Error adding brand:", error);
       toast({

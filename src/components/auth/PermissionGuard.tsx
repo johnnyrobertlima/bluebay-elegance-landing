@@ -4,9 +4,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 
-interface PermissionGuardProps {
+export interface PermissionGuardProps {
   children: ReactNode;
   requiredPermission?: string;
+  resourcePath?: string;
   fallbackPath?: string;
 }
 
