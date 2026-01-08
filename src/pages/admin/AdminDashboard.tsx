@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { 
   Shield, 
   Users, 
@@ -19,9 +20,17 @@ import {
   Loader2,
   TrendingUp,
   ShoppingCart,
-  Warehouse
+  Warehouse,
+  Bell,
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle,
+  Info
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAdminNotifications, AdminNotification, NotificationType } from '@/hooks/useAdminNotifications';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface DashboardStats {
   totalUsers: number;
@@ -31,6 +40,86 @@ interface DashboardStats {
   totalClients: number;
   adminsCount: number;
 }
+
+const getTypeIcon = (type: NotificationType) => {
+  switch (type) {
+    case 'error':
+      return <AlertCircle className="h-4 w-4 text-destructive" />;
+    case 'warning':
+      return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+    case 'success':
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
+    default:
+      return <Info className="h-4 w-4 text-blue-500" />;
+  }
+};
+
+const RecentNotifications = () => {
+  const { notifications, isLoading, markAsRead, unreadCount } = useAdminNotifications();
+  const recentNotifications = notifications?.slice(0, 5) || [];
+
+  if (isLoading) {
+    return (
+      <section>
+        <h2 className="text-lg font-semibold mb-4">Notificações Recentes</h2>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+    );
+  }
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Bell className="h-5 w-5" />
+          Notificações Recentes
+          {unreadCount > 0 && (
+            <Badge variant="destructive" className="ml-2">{unreadCount} novas</Badge>
+          )}
+        </h2>
+      </div>
+      <Card>
+        <CardContent className="pt-6">
+          {recentNotifications.length > 0 ? (
+            <div className="space-y-3">
+              {recentNotifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
+                    notification.is_read ? 'bg-muted/30' : 'bg-primary/5'
+                  }`}
+                  onClick={() => !notification.is_read && markAsRead(notification.id)}
+                >
+                  {getTypeIcon(notification.type)}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">{notification.title}</p>
+                    <p className="text-xs text-muted-foreground truncate">{notification.message}</p>
+                  </div>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true, locale: ptBR })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>Nenhuma notificação recente</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </section>
+  );
+};
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -223,6 +312,9 @@ const AdminDashboard = () => {
             ))}
           </div>
         </section>
+
+        {/* Recent Notifications */}
+        <RecentNotifications />
 
         {/* Additional Links */}
         <section>
