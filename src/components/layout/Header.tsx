@@ -4,6 +4,7 @@ import { Menu, X, User, LogOut, LayoutDashboard, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { NotificationBell } from "@/components/admin/NotificationBell";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -73,15 +74,18 @@ const Header = () => {
             {user ? (
               <div className="hidden sm:flex items-center gap-3">
                 {isAdmin && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate('/admin')}
-                    className="flex items-center gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                  >
-                    <Shield className="h-4 w-4" />
-                    Admin
-                  </Button>
+                  <>
+                    <NotificationBell />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate('/admin')}
+                      className="flex items-center gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Shield className="h-4 w-4" />
+                      Admin
+                    </Button>
+                  </>
                 )}
                 <Button
                   variant="ghost"
