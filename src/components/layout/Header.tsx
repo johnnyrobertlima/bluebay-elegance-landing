@@ -22,9 +22,8 @@ const Header = () => {
 
   const navLinks = [
     { href: "/", label: "Home" },
+    { href: "/produtos", label: "Produtos" },
     { href: "/colecao", label: "Coleção OI26" },
-    { href: "/masculino", label: "Masculino" },
-    { href: "/feminino", label: "Feminino" },
     { href: "/sobre", label: "Sobre Nós" },
   ];
 
