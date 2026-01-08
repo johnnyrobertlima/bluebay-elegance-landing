@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { saveItem, deleteItem } from "@/services/bluebay_adm/itemManagementService";
+import { updateItem, deleteItem } from "@/services/bluebay_adm/itemManagementService";
 
 export const useItemMutations = (onSuccess: () => void) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -18,11 +18,18 @@ export const useItemMutations = (onSuccess: () => void) => {
         id_marca: itemData.id_marca || null
       };
       
-      const result = await saveItem(cleanedItemData, isUpdate);
+      if (isUpdate) {
+        await updateItem(
+          cleanedItemData.ITEM_CODIGO, 
+          cleanedItemData.MATRIZ || 1, 
+          cleanedItemData.FILIAL || 1, 
+          cleanedItemData
+        );
+      }
       
       toast({
         title: isUpdate ? "Item atualizado" : "Item cadastrado",
-        description: result.message,
+        description: "Operação realizada com sucesso.",
       });
       
       onSuccess();
@@ -41,11 +48,11 @@ export const useItemMutations = (onSuccess: () => void) => {
   const handleDeleteItem = async (item: any) => {
     try {
       setIsLoading(true);
-      const result = await deleteItem(item.ITEM_CODIGO);
+      await deleteItem(item.ITEM_CODIGO, item.MATRIZ || 1, item.FILIAL || 1);
       
       toast({
         title: "Item excluído",
-        description: result.message,
+        description: "Item removido com sucesso.",
       });
       
       onSuccess();

@@ -29,6 +29,14 @@ export interface BrandPerformance {
   volume: number;
 }
 
+export interface BrandPerformanceItem {
+  brand: string;
+  totalOrders: number;
+  totalBilled: number;
+  conversionRate: number;
+  volume: number;
+}
+
 export interface DeliveryData {
   onTimeDeliveries: number;
   lateDeliveries: number;
@@ -50,6 +58,14 @@ export interface TimeSeriesData {
   monthlySeries?: MonthlySeriesItem[];
 }
 
+export interface TimeSeriesPoint {
+  date: string;
+  total: number;
+  orders: number;
+  billed: number;
+  formattedDate: string;
+}
+
 export interface MonthlySeriesItem {
   month: string;
   total: number;
@@ -63,4 +79,12 @@ export interface DashboardKpiData {
   averageTicket: number;
   conversionRate: number;
   totalItems: number;
+}
+
+export interface DashboardFilterParams {
+  startDate?: string;
+  endDate?: string;
+  brand?: string;
+  representative?: string;
+  status?: string;
 }

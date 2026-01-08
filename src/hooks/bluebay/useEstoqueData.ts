@@ -1,31 +1,17 @@
-// Stub hook for Estoque data
+// Hook for Estoque data
 import { useState, useEffect } from "react";
-
-interface EstoqueItem {
-  ITEM_CODIGO: string;
-  DESCRICAO: string;
-  GRU_DESCRICAO: string;
-  FISICO: number;
-  DISPONIVEL: number;
-  LOCAL: number;
-}
-
-interface GroupedEstoqueItem {
-  grupo: string;
-  items: EstoqueItem[];
-}
+import { GroupedEstoque, EstoqueItem } from "@/types/bk/estoque";
 
 export const useEstoqueData = () => {
   const [data, setData] = useState<EstoqueItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<EstoqueItem[]>([]);
-  const [groupedItems, setGroupedItems] = useState<GroupedEstoqueItem[]>([]);
+  const [groupedItems, setGroupedItems] = useState<GroupedEstoque[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // TODO: Implement actual data fetching
       setData([]);
       setFilteredItems([]);
       setGroupedItems([]);
@@ -53,15 +39,27 @@ export const useEstoqueData = () => {
 
   useEffect(() => {
     const groups = filteredItems.reduce((acc, item) => {
-      const grupo = item.GRU_DESCRICAO || "Sem Grupo";
-      if (!acc[grupo]) {
-        acc[grupo] = [];
+      const groupName = item.GRU_DESCRICAO || "Sem Grupo";
+      if (!acc[groupName]) {
+        acc[groupName] = {
+          groupName,
+          groupCode: item.GRU_CODIGO,
+          items: [],
+          totalItems: 0,
+          totalFisico: 0,
+          totalDisponivel: 0,
+          totalReservado: 0
+        };
       }
-      acc[grupo].push(item);
+      acc[groupName].items.push(item);
+      acc[groupName].totalItems += 1;
+      acc[groupName].totalFisico += item.FISICO || 0;
+      acc[groupName].totalDisponivel += item.DISPONIVEL || 0;
+      acc[groupName].totalReservado += item.RESERVADO || 0;
       return acc;
-    }, {} as Record<string, EstoqueItem[]>);
+    }, {} as Record<string, GroupedEstoque>);
 
-    setGroupedItems(Object.entries(groups).map(([grupo, items]) => ({ grupo, items })));
+    setGroupedItems(Object.values(groups));
   }, [filteredItems]);
 
   return {
