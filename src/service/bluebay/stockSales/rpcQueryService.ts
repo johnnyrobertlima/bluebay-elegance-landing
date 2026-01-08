@@ -96,7 +96,7 @@ const executeRpcQuery = async (
     p_offset: offset
   };
   
-  return await supabase
+  return await (supabase as any)
     .rpc('get_stock_sales_analytics', params, {
       head: false,
       count: 'exact'

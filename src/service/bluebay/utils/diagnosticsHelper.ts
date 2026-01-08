@@ -54,21 +54,20 @@ export const checkRecordsInPeriod = async (startDate: string, endDate: string) =
  */
 export const testRpcFunction = async () => {
   try {
+    // Query directly from table instead of using RPC
     const { data: testData, error: testError } = await supabase
-      .rpc('get_bluebay_faturamento', { 
-        start_date: null,
-        end_date: null
-      })
+      .from('BLUEBAY_FATURAMENTO')
+      .select('DATA_EMISSAO, ITEM_CODIGO, PED_NUMPEDIDO')
       .limit(5);
     
     if (testError) {
-      console.error("Erro no teste da função RPC:", testError);
+      console.error("Erro no teste da consulta:", testError);
       return null;
     }
     
     return testData;
   } catch (error) {
-    console.error("Error testing RPC function:", error);
+    console.error("Error testing query:", error);
     return null;
   }
 };
