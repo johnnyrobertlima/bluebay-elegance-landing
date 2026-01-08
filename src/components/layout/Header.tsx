@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Menu, X, User, LogOut } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Menu, X, User, LogOut, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,6 +9,7 @@ const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, signOut } = useAuth();
 
   useEffect(() => {
@@ -72,9 +73,15 @@ const Header = () => {
           <div className="flex items-center space-x-4">
             {user ? (
               <div className="hidden sm:flex items-center gap-3">
-                <span className="font-body text-sm text-foreground/80">
-                  {user.email}
-                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/dashboard')}
+                  className="flex items-center gap-2 text-foreground/80 hover:text-primary"
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  Minha Conta
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -138,9 +145,14 @@ const Header = () => {
             ))}
             {user ? (
               <>
-                <span className="font-body text-sm text-foreground/80 py-2">
-                  {user.email}
-                </span>
+                <Link
+                  to="/dashboard"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="font-body text-sm font-medium tracking-wide text-foreground/80 hover:text-primary py-2 flex items-center gap-2"
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  Minha Conta
+                </Link>
                 <Button
                   variant="outline"
                   size="sm"
