@@ -1,22 +1,22 @@
-
 import React, { ReactNode } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, AppRole } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 
 export interface PermissionGuardProps {
   children: ReactNode;
   requiredPermission?: string;
+  requiredRole?: AppRole;
   resourcePath?: string;
   fallbackPath?: string;
 }
 
 export const PermissionGuard: React.FC<PermissionGuardProps> = ({
   children,
-  requiredPermission,
+  requiredRole,
   fallbackPath = "/auth",
 }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, userRoles, isAdmin } = useAuth();
 
   if (loading) {
     return (
@@ -30,8 +30,20 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
     return <Navigate to={fallbackPath} replace />;
   }
 
-  // For now, allow access to authenticated users
-  // Can be extended to check specific permissions
+  // If a specific role is required, check for it
+  if (requiredRole) {
+    // Admins always have access
+    if (isAdmin) {
+      return <>{children}</>;
+    }
+    
+    // Check if user has the required role
+    if (!userRoles.includes(requiredRole)) {
+      return <Navigate to="/" replace />;
+    }
+  }
+
+  // For authenticated users with any role, or if no specific role required
   return <>{children}</>;
 };
 
