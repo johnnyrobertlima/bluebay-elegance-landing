@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, User, LogOut, LayoutDashboard, Shield } from "lucide-react";
+import { Menu, X, User, LogOut, LayoutDashboard, Shield, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -76,6 +76,15 @@ const Header = () => {
                 {isAdmin && (
                   <>
                     <NotificationBell />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate('/client-area/bluebay_adm')}
+                      className="flex items-center gap-2 text-primary hover:text-primary hover:bg-primary/10"
+                    >
+                      <Building2 className="h-4 w-4" />
+                      Bluebay ADM
+                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -160,14 +169,24 @@ const Header = () => {
             {user ? (
               <>
                 {isAdmin && (
-                  <Link
-                    to="/admin"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="font-body text-sm font-medium tracking-wide text-destructive hover:text-destructive py-2 flex items-center gap-2"
-                  >
-                    <Shield className="h-4 w-4" />
-                    Painel Admin
-                  </Link>
+                  <>
+                    <Link
+                      to="/client-area/bluebay_adm"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="font-body text-sm font-medium tracking-wide text-primary hover:text-primary py-2 flex items-center gap-2"
+                    >
+                      <Building2 className="h-4 w-4" />
+                      Bluebay ADM
+                    </Link>
+                    <Link
+                      to="/admin"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="font-body text-sm font-medium tracking-wide text-destructive hover:text-destructive py-2 flex items-center gap-2"
+                    >
+                      <Shield className="h-4 w-4" />
+                      Painel Admin
+                    </Link>
+                  </>
                 )}
                 <Link
                   to="/dashboard"
