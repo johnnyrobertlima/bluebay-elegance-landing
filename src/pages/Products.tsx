@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import Header from '@/components/layout/Header';
@@ -270,56 +271,63 @@ export default function Products() {
               {filteredProducts.map((product) => (
                 <Card
                   key={product.id}
-                  className="group overflow-hidden hover:shadow-elegant transition-all duration-300"
+                  className="group relative overflow-hidden hover:shadow-elegant transition-all duration-300"
                 >
-                  <div className="relative aspect-square bg-muted overflow-hidden">
-                    {product.image_url ? (
-                      <img
-                        src={product.image_url}
-                        alt={product.name}
-                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center text-muted-foreground">
-                        <span className="text-4xl">📦</span>
-                      </div>
-                    )}
-
-                    {product.category && (
-                      <Badge
-                        variant="secondary"
-                        className="absolute top-3 left-3 bg-background/90 backdrop-blur-sm"
-                      >
-                        {product.category}
-                      </Badge>
-                    )}
-
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        'absolute top-3 right-3 h-9 w-9 rounded-full bg-background/90 backdrop-blur-sm transition-all',
-                        favorites.has(product.id)
-                          ? 'text-red-500 hover:text-red-600 hover:bg-background'
-                          : 'text-muted-foreground hover:text-red-500 hover:bg-background'
+                  <Link to={`/produtos/${product.id}`} className="block">
+                    <div className="relative aspect-square bg-muted overflow-hidden">
+                      {product.image_url ? (
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center text-muted-foreground">
+                          <span className="text-4xl">📦</span>
+                        </div>
                       )}
-                      onClick={() => toggleFavorite(product.id)}
-                      disabled={favoriteLoading === product.id}
-                    >
-                      <Heart
-                        className={cn(
-                          'h-5 w-5 transition-all',
-                          favorites.has(product.id) && 'fill-current',
-                          favoriteLoading === product.id && 'animate-pulse'
-                        )}
-                      />
-                    </Button>
-                  </div>
+
+                      {product.category && (
+                        <Badge
+                          variant="secondary"
+                          className="absolute top-3 left-3 bg-background/90 backdrop-blur-sm"
+                        >
+                          {product.category}
+                        </Badge>
+                      )}
+                    </div>
+                  </Link>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      'absolute top-3 right-3 h-9 w-9 rounded-full bg-background/90 backdrop-blur-sm transition-all z-10',
+                      favorites.has(product.id)
+                        ? 'text-red-500 hover:text-red-600 hover:bg-background'
+                        : 'text-muted-foreground hover:text-red-500 hover:bg-background'
+                    )}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      toggleFavorite(product.id);
+                    }}
+                    disabled={favoriteLoading === product.id}
+                  >
+                    <Heart
+                      className={cn(
+                        'h-5 w-5 transition-all',
+                        favorites.has(product.id) && 'fill-current',
+                        favoriteLoading === product.id && 'animate-pulse'
+                      )}
+                    />
+                  </Button>
 
                   <CardContent className="p-4">
-                    <h3 className="font-medium text-foreground truncate mb-1">
-                      {product.name}
-                    </h3>
+                    <Link to={`/produtos/${product.id}`}>
+                      <h3 className="font-medium text-foreground truncate mb-1 hover:text-primary transition-colors">
+                        {product.name}
+                      </h3>
+                    </Link>
                     {product.description && (
                       <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                         {product.description}
@@ -329,6 +337,9 @@ export default function Products() {
                       <span className="text-lg font-semibold text-primary">
                         {formatCurrency(Number(product.price))}
                       </span>
+                      <Button size="sm" variant="secondary" asChild>
+                        <Link to={`/produtos/${product.id}`}>Ver Detalhes</Link>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
