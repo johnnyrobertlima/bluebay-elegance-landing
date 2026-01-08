@@ -1,20 +1,16 @@
 
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { Menu, X, Users, Receipt, BarChart2, FileText, ClipboardCheck, LogOut, FileSpreadsheet, Package, ShoppingBag, ShoppingCart, PackageCheck, Group, Tag } from "lucide-react";
-import {
-  NavigationMenu,
-  NavigationMenuList,
-  NavigationMenuItem,
-  NavigationMenuLink,
-} from "@/components/ui/navigation-menu";
+import { Menu, X, Users, Receipt, BarChart2, FileText, ClipboardCheck, LogOut, FileSpreadsheet, Package, ShoppingBag, ShoppingCart, PackageCheck, Group, Tag, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { GlobalSearch } from "./GlobalSearch";
 
 export const BluebayAdmMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -52,92 +48,118 @@ export const BluebayAdmMenu = () => {
   };
 
   return (
-    <div className="sticky top-0 z-50 w-full bg-primary shadow-md">
-      <div className="container mx-auto px-4">
-        {/* Desktop Menu */}
-        <div className="hidden md:flex justify-between items-center py-3">
-          <div className="flex items-center space-x-1">
-            {menuItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center px-3 py-2 rounded-md text-white hover:bg-primary-700 transition-colors whitespace-nowrap",
-                    isActive ? "bg-primary-800" : ""
-                  )
-                }
-                end={item.path === "/client-area/bluebay_adm"}
-              >
-                {item.icon}
-                {item.name}
-              </NavLink>
-            ))}
-          </div>
-          
-          <button
-            onClick={handleLogout}
-            className="flex items-center px-4 py-2 rounded-md text-white bg-blue-700 hover:bg-blue-800 transition-colors"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
-          </button>
-        </div>
-
-        {/* Mobile Menu Button */}
-        <div className="md:hidden flex justify-between items-center py-3">
-          <span className="font-semibold text-lg text-white">Bluebay ADM Menu</span>
-          <div className="flex items-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="mr-2 text-white bg-blue-700 hover:bg-blue-800"
-            >
-              <LogOut size={20} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsOpen(!isOpen)}
-              className="p-1 text-white hover:bg-primary-700"
-            >
-              {isOpen ? <X size={24} /> : <Menu size={24} />}
-            </Button>
-          </div>
-        </div>
-
-        {/* Mobile Menu Dropdown */}
-        {isOpen && (
-          <div className="md:hidden py-2 space-y-1">
-            {menuItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center px-4 py-2 text-sm rounded-md transition-colors text-white",
-                    isActive ? "bg-primary-800" : "hover:bg-primary-700"
-                  )
-                }
-                onClick={() => setIsOpen(false)}
-                end={item.path === "/client-area/bluebay_adm"}
-              >
-                {item.icon}
-                {item.name}
-              </NavLink>
-            ))}
+    <>
+      <div className="sticky top-0 z-50 w-full bg-primary shadow-md">
+        <div className="container mx-auto px-4">
+          {/* Desktop Menu */}
+          <div className="hidden md:flex justify-between items-center py-3">
+            <div className="flex items-center space-x-1">
+              {menuItems.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center px-3 py-2 rounded-md text-white hover:bg-primary-700 transition-colors whitespace-nowrap",
+                      isActive ? "bg-primary-800" : ""
+                    )
+                  }
+                  end={item.path === "/client-area/bluebay_adm"}
+                >
+                  {item.icon}
+                  {item.name}
+                </NavLink>
+              ))}
+            </div>
             
-            <button
-              onClick={handleLogout}
-              className="flex w-full items-center px-4 py-2 text-sm rounded-md transition-colors text-white bg-blue-700 hover:bg-blue-800"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sair
-            </button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsSearchOpen(true)}
+                className="flex items-center gap-2 text-white hover:bg-primary-700"
+              >
+                <Search className="h-4 w-4" />
+                <span className="hidden lg:inline">Buscar</span>
+                <kbd className="hidden lg:inline-flex h-5 items-center gap-1 rounded border bg-primary-800 px-1.5 font-mono text-[10px] font-medium text-white/70">
+                  ⌘K
+                </kbd>
+              </Button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center px-4 py-2 rounded-md text-white bg-blue-700 hover:bg-blue-800 transition-colors"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sair
+              </button>
+            </div>
           </div>
-        )}
+
+          {/* Mobile Menu Button */}
+          <div className="md:hidden flex justify-between items-center py-3">
+            <span className="font-semibold text-lg text-white">Bluebay ADM Menu</span>
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsSearchOpen(true)}
+                className="mr-1 text-white hover:bg-primary-700"
+              >
+                <Search size={20} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="mr-2 text-white bg-blue-700 hover:bg-blue-800"
+              >
+                <LogOut size={20} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsOpen(!isOpen)}
+                className="p-1 text-white hover:bg-primary-700"
+              >
+                {isOpen ? <X size={24} /> : <Menu size={24} />}
+              </Button>
+            </div>
+          </div>
+
+          {/* Mobile Menu Dropdown */}
+          {isOpen && (
+            <div className="md:hidden py-2 space-y-1">
+              {menuItems.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center px-4 py-2 text-sm rounded-md transition-colors text-white",
+                      isActive ? "bg-primary-800" : "hover:bg-primary-700"
+                    )
+                  }
+                  onClick={() => setIsOpen(false)}
+                  end={item.path === "/client-area/bluebay_adm"}
+                >
+                  {item.icon}
+                  {item.name}
+                </NavLink>
+              ))}
+              
+              <button
+                onClick={handleLogout}
+                className="flex w-full items-center px-4 py-2 text-sm rounded-md transition-colors text-white bg-blue-700 hover:bg-blue-800"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sair
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      <GlobalSearch open={isSearchOpen} onOpenChange={setIsSearchOpen} />
+    </>
   );
 };
