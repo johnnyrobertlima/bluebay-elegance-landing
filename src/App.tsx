@@ -14,6 +14,7 @@ import ProductDetail from "./pages/ProductDetail";
 import NotFound from "./pages/NotFound";
 import UserRolesManagement from "./pages/admin/UserRolesManagement";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import { bluebayAdmRoutes } from "@/lib/routes/bluebay-adm-routes";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/profile/edit" element={<ProfileEdit />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/roles" element={<UserRolesManagement />} />
+              {bluebayAdmRoutes}
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
