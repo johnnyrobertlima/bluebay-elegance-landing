@@ -25,7 +25,11 @@ import {
   AlertCircle,
   AlertTriangle,
   CheckCircle,
-  Info
+  Info,
+  UsersRound,
+  LayoutGrid,
+  Home,
+  Menu
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAdminNotifications, AdminNotification, NotificationType } from '@/hooks/useAdminNotifications';
@@ -315,6 +319,80 @@ const AdminDashboard = () => {
 
         {/* Recent Notifications */}
         <RecentNotifications />
+
+        {/* System Configuration */}
+        <section>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Configurações do Sistema
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link to="/admin/user-groups">
+              <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer group border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-indigo-500/10">
+                      <UsersRound className="h-6 w-6 text-indigo-500" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold">Grupos de Usuários</h3>
+                      <p className="text-sm text-muted-foreground">Gerenciar grupos e permissões</p>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/admin/system-pages">
+              <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer group border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-teal-500/10">
+                      <LayoutGrid className="h-6 w-6 text-teal-500" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold">Páginas do Sistema</h3>
+                      <p className="text-sm text-muted-foreground">Cadastrar páginas e rotas</p>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/admin/index-content">
+              <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer group border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-amber-500/10">
+                      <Home className="h-6 w-6 text-amber-500" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold">Conteúdo da Home</h3>
+                      <p className="text-sm text-muted-foreground">Editar seções e imagens</p>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+            <Link to="/admin/group-menus">
+              <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer group border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-rose-500/10">
+                      <Menu className="h-6 w-6 text-rose-500" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold">Menus por Grupo</h3>
+                      <p className="text-sm text-muted-foreground">Configurar menus de navegação</p>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+        </section>
 
         {/* Additional Links */}
         <section>
