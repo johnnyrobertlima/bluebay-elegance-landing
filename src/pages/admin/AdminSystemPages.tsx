@@ -83,13 +83,13 @@ const AdminSystemPages = () => {
   const loadPages = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("system_pages")
         .select("*")
         .order("name");
 
       if (error) throw error;
-      setPages(data || []);
+      setPages((data || []) as SystemPage[]);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -138,7 +138,7 @@ const AdminSystemPages = () => {
       setIsSaving(true);
 
       if (selectedPage) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("system_pages")
           .update({
             path: formData.path,
@@ -152,7 +152,7 @@ const AdminSystemPages = () => {
         if (error) throw error;
         toast({ title: "Página atualizada!" });
       } else {
-        const { error } = await supabase.from("system_pages").insert({
+        const { error } = await (supabase as any).from("system_pages").insert({
           path: formData.path,
           name: formData.name,
           description: formData.description || null,
@@ -179,7 +179,7 @@ const AdminSystemPages = () => {
 
   const handleDelete = async (pageId: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("system_pages")
         .delete()
         .eq("id", pageId);

@@ -82,7 +82,7 @@ const AdminUserGroups = () => {
   const loadGroups = async () => {
     try {
       setIsLoading(true);
-      const { data: groupsData, error } = await supabase
+      const { data: groupsData, error } = await (supabase as any)
         .from("user_groups")
         .select("*")
         .order("name");
@@ -91,8 +91,8 @@ const AdminUserGroups = () => {
 
       // Get member counts
       const groupsWithCounts = await Promise.all(
-        (groupsData || []).map(async (group) => {
-          const { count } = await supabase
+        ((groupsData || []) as UserGroup[]).map(async (group: UserGroup) => {
+          const { count } = await (supabase as any)
             .from("user_group_members")
             .select("*", { count: "exact", head: true })
             .eq("group_id", group.id);
@@ -100,7 +100,7 @@ const AdminUserGroups = () => {
         })
       );
 
-      setGroups(groupsWithCounts);
+      setGroups(groupsWithCounts as UserGroup[]);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -147,7 +147,7 @@ const AdminUserGroups = () => {
       setIsSaving(true);
 
       if (selectedGroup) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("user_groups")
           .update({
             name: formData.name,
@@ -160,7 +160,7 @@ const AdminUserGroups = () => {
         if (error) throw error;
         toast({ title: "Grupo atualizado com sucesso!" });
       } else {
-        const { error } = await supabase.from("user_groups").insert({
+        const { error } = await (supabase as any).from("user_groups").insert({
           name: formData.name,
           description: formData.description || null,
           redirect_after_login: formData.redirect_after_login,
@@ -186,7 +186,7 @@ const AdminUserGroups = () => {
 
   const handleDelete = async (groupId: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("user_groups")
         .delete()
         .eq("id", groupId);
