@@ -14,6 +14,10 @@ import ProductDetail from "./pages/ProductDetail";
 import NotFound from "./pages/NotFound";
 import UserRolesManagement from "./pages/admin/UserRolesManagement";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUserGroups from "./pages/admin/AdminUserGroups";
+import AdminGroupMenus from "./pages/admin/AdminGroupMenus";
+import AdminSystemPages from "./pages/admin/AdminSystemPages";
+import AdminIndexContent from "./pages/admin/AdminIndexContent";
 import { bluebayAdmRoutes } from "@/lib/routes/bluebay-adm-routes";
 
 const queryClient = new QueryClient();
@@ -39,6 +43,10 @@ const App = () => (
               <Route path="/profile/edit" element={<ProfileEdit />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/roles" element={<UserRolesManagement />} />
+              <Route path="/admin/groups" element={<AdminUserGroups />} />
+              <Route path="/admin/groups/:groupId/menus" element={<AdminGroupMenus />} />
+              <Route path="/admin/pages" element={<AdminSystemPages />} />
+              <Route path="/admin/index-content" element={<AdminIndexContent />} />
               {bluebayAdmRoutes}
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
