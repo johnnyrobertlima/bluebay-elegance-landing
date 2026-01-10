@@ -139,7 +139,7 @@ const AdminDashboard = () => {
         supabase.from('orders').select('id', { count: 'exact', head: true }),
         supabase.from('BLUEBAY_ITEM').select('ITEM_CODIGO', { count: 'exact', head: true }),
         supabase.from('BLUEBAY_PESSOA').select('PES_CODIGO', { count: 'exact', head: true }),
-        supabase.from('user_roles').select('id', { count: 'exact', head: true }).eq('role', 'admin'),
+        (supabase as any).from('app_user_roles').select('id', { count: 'exact', head: true }).eq('role', 'admin'),
       ]);
 
       return {
