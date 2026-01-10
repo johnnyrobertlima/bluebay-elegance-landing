@@ -27,8 +27,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserRoles = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('user_roles')
+      const { data, error } = await (supabase as any)
+        .from('app_user_roles')
         .select('role')
         .eq('user_id', userId);
       
@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       
-      const roles = (data || []).map(r => r.role as AppRole);
+      const roles = (data || []).map((r: { role: string }) => r.role as AppRole);
       setUserRoles(roles);
       setIsAdmin(roles.includes('admin'));
     } catch (err) {
