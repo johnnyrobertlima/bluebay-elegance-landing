@@ -30,8 +30,8 @@ export const useUserRoles = () => {
     queryFn: async () => {
       if (!user?.id) return false;
       
-      const { data, error } = await supabase
-        .rpc('has_role', { _user_id: user.id, _role: 'admin' });
+      const { data, error } = await (supabase as any)
+        .rpc('has_app_role', { _user_id: user.id, _role: 'admin' });
       
       if (error) {
         console.error('Error checking admin status:', error);
@@ -49,8 +49,8 @@ export const useUserRoles = () => {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      const { data, error } = await supabase
-        .from('user_roles')
+      const { data, error } = await (supabase as any)
+        .from('app_user_roles')
         .select('*')
         .eq('user_id', user.id);
       
@@ -79,8 +79,8 @@ export const useUserRoles = () => {
       }
 
       // Then get all roles
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
+      const { data: roles, error: rolesError } = await (supabase as any)
+        .from('app_user_roles')
         .select('*');
       
       if (rolesError) {
@@ -112,8 +112,8 @@ export const useUserRoles = () => {
   // Add role to user
   const addRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      const { error } = await supabase
-        .from('user_roles')
+      const { error } = await (supabase as any)
+        .from('app_user_roles')
         .insert({ user_id: userId, role });
       
       if (error) throw error;
@@ -133,8 +133,8 @@ export const useUserRoles = () => {
   // Remove role from user
   const removeRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      const { error } = await supabase
-        .from('user_roles')
+      const { error } = await (supabase as any)
+        .from('app_user_roles')
         .delete()
         .eq('user_id', userId)
         .eq('role', role);
