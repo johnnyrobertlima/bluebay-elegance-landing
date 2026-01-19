@@ -11,18 +11,37 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { User, Package, Heart, Calendar, Phone, Building2, Mail, Trash2, Pencil } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import type { Tables } from '@/integrations/supabase/types';
+// Local types since these tables may not exist in the schema
+interface Profile {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  company_name: string | null;
+  phone: string | null;
+  created_at: string;
+}
 
-type Profile = Tables<'profiles'>;
-type Order = Tables<'orders'>;
-type Favorite = Tables<'favorites'>;
-type Product = Tables<'products'>;
+interface Product {
+  id: string;
+  name: string;
+  price: number | null;
+  image_url: string | null;
+}
 
-interface FavoriteWithProduct extends Favorite {
+interface FavoriteWithProduct {
+  id: string;
+  user_id: string;
+  product_id: string;
+  created_at: string;
   products: Product | null;
 }
 
-interface OrderWithItems extends Order {
+interface OrderWithItems {
+  id: string;
+  user_id: string;
+  status: string;
+  total: number;
+  created_at: string;
   order_items: {
     id: string;
     quantity: number;
@@ -77,8 +96,8 @@ export default function Dashboard() {
     setLoading(true);
     try {
       const [profileRes, ordersRes, favoritesRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
-        supabase
+        (supabase as any).from('profiles').select('*').eq('id', user.id).maybeSingle(),
+        (supabase as any)
           .from('orders')
           .select(`
             *,
@@ -92,7 +111,7 @@ export default function Dashboard() {
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(5),
-        supabase
+        (supabase as any)
           .from('favorites')
           .select(`
             *,
@@ -102,7 +121,7 @@ export default function Dashboard() {
           .order('created_at', { ascending: false }),
       ]);
 
-      if (profileRes.data) setProfile(profileRes.data);
+      if (profileRes.data) setProfile(profileRes.data as Profile);
       if (ordersRes.data) setOrders(ordersRes.data as OrderWithItems[]);
       if (favoritesRes.data) setFavorites(favoritesRes.data as FavoriteWithProduct[]);
     } catch (error) {
@@ -119,7 +138,7 @@ export default function Dashboard() {
 
   const removeFavorite = async (favoriteId: string) => {
     try {
-      const { error } = await supabase.from('favorites').delete().eq('id', favoriteId);
+      const { error } = await (supabase as any).from('favorites').delete().eq('id', favoriteId);
       if (error) throw error;
       
       setFavorites(favorites.filter((f) => f.id !== favoriteId));

@@ -27,7 +27,7 @@ export const useAdminNotifications = () => {
   const { data: notifications, isLoading, refetch } = useQuery({
     queryKey: ['admin-notifications'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('admin_notifications')
         .select('*')
         .order('created_at', { ascending: false })
@@ -49,7 +49,7 @@ export const useAdminNotifications = () => {
   // Mark notification as read
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('admin_notifications')
         .update({ is_read: true, read_at: new Date().toISOString() })
         .eq('id', notificationId);
@@ -64,7 +64,7 @@ export const useAdminNotifications = () => {
   // Mark all as read
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('admin_notifications')
         .update({ is_read: true, read_at: new Date().toISOString() })
         .eq('is_read', false);
@@ -80,7 +80,7 @@ export const useAdminNotifications = () => {
   // Delete notification
   const deleteNotificationMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('admin_notifications')
         .delete()
         .eq('id', notificationId);
@@ -95,7 +95,7 @@ export const useAdminNotifications = () => {
   // Clear all notifications
   const clearAllMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('admin_notifications')
         .delete()
         .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
