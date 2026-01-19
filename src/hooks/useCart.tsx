@@ -1,7 +1,14 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import type { Tables } from '@/integrations/supabase/types';
 
-type Product = Tables<'products'>;
+// Local Product type since this table may not exist in the schema
+interface Product {
+  id: string;
+  name: string;
+  price: number | null;
+  image_url: string | null;
+  description?: string | null;
+  category?: string | null;
+}
 
 export interface CartItem {
   product: Product;

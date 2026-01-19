@@ -11,9 +11,16 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Camera, Loader2, User } from 'lucide-react';
-import type { Tables } from '@/integrations/supabase/types';
-
-type Profile = Tables<'profiles'>;
+// Local Profile type since this table may not exist in the schema
+interface Profile {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  company_name: string | null;
+  phone: string | null;
+  created_at: string;
+  updated_at: string | null;
+}
 
 export default function ProfileEdit() {
   const { user, loading: authLoading } = useAuth();
@@ -48,7 +55,7 @@ export default function ProfileEdit() {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('profiles')
         .select('*')
         .eq('id', user.id)
@@ -57,11 +64,12 @@ export default function ProfileEdit() {
       if (error) throw error;
 
       if (data) {
-        setProfile(data);
-        setFullName(data.full_name || '');
-        setCompanyName(data.company_name || '');
-        setPhone(data.phone || '');
-        setAvatarUrl(data.avatar_url || '');
+        const profileData = data as Profile;
+        setProfile(profileData);
+        setFullName(profileData.full_name || '');
+        setCompanyName(profileData.company_name || '');
+        setPhone(profileData.phone || '');
+        setAvatarUrl(profileData.avatar_url || '');
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -148,7 +156,7 @@ export default function ProfileEdit() {
         updated_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('profiles')
         .upsert(updates);
 

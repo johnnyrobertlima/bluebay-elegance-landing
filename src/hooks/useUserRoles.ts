@@ -69,7 +69,7 @@ export const useUserRoles = () => {
     queryKey: ['users-with-roles'],
     queryFn: async () => {
       // First get all profiles
-      const { data: profiles, error: profilesError } = await supabase
+      const { data: profiles, error: profilesError } = await (supabase as any)
         .from('profiles')
         .select('id, full_name, created_at');
       
@@ -96,7 +96,7 @@ export const useUserRoles = () => {
       });
 
       // Combine profiles with roles
-      const usersWithRoles: UserWithRoles[] = profiles.map(profile => ({
+      const usersWithRoles: UserWithRoles[] = (profiles as any[]).map((profile: any) => ({
         id: profile.id,
         email: '', // Will be fetched separately if needed
         full_name: profile.full_name,

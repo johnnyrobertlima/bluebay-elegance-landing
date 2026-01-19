@@ -134,9 +134,9 @@ const AdminDashboard = () => {
     queryKey: ['admin-dashboard-stats'],
     queryFn: async (): Promise<DashboardStats> => {
       const [profiles, products, orders, items, clients, admins] = await Promise.all([
-        supabase.from('profiles').select('id', { count: 'exact', head: true }),
-        supabase.from('products').select('id', { count: 'exact', head: true }),
-        supabase.from('orders').select('id', { count: 'exact', head: true }),
+        (supabase as any).from('profiles').select('id', { count: 'exact', head: true }),
+        (supabase as any).from('products').select('id', { count: 'exact', head: true }),
+        (supabase as any).from('orders').select('id', { count: 'exact', head: true }),
         supabase.from('BLUEBAY_ITEM').select('ITEM_CODIGO', { count: 'exact', head: true }),
         supabase.from('BLUEBAY_PESSOA').select('PES_CODIGO', { count: 'exact', head: true }),
         (supabase as any).from('app_user_roles').select('id', { count: 'exact', head: true }).eq('role', 'admin'),

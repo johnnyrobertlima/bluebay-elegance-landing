@@ -11,9 +11,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Heart, Minus, Plus, ShoppingBag, ArrowLeft, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Tables } from '@/integrations/supabase/types';
-
-type Product = Tables<'products'>;
+// Local Product type since this table may not exist in the schema
+interface Product {
+  id: string;
+  name: string;
+  price: number | null;
+  image_url: string | null;
+  description: string | null;
+  category: string | null;
+  is_active: boolean | null;
+  created_at: string;
+}
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
@@ -43,7 +51,7 @@ export default function ProductDetail() {
   const fetchProduct = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('products')
         .select('*')
         .eq('id', id)
@@ -51,7 +59,7 @@ export default function ProductDetail() {
         .maybeSingle();
 
       if (error) throw error;
-      setProduct(data);
+      setProduct(data as Product | null);
     } catch (error) {
       console.error('Error fetching product:', error);
       toast({
@@ -68,7 +76,7 @@ export default function ProductDetail() {
     if (!user || !id) return;
 
     try {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('favorites')
         .select('id')
         .eq('user_id', user.id)
@@ -96,7 +104,7 @@ export default function ProductDetail() {
 
     try {
       if (isFavorite) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('favorites')
           .delete()
           .eq('user_id', user.id)
@@ -109,7 +117,7 @@ export default function ProductDetail() {
           description: 'Produto removido dos favoritos.',
         });
       } else {
-        const { error } = await supabase.from('favorites').insert({
+        const { error } = await (supabase as any).from('favorites').insert({
           user_id: user.id,
           product_id: id,
         });
