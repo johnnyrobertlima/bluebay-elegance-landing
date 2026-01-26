@@ -22,12 +22,15 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Loader2, ArrowLeft, Users, UserX, UserCheck, Ban, Trash2 } from "lucide-react";
+import { Loader2, ArrowLeft, Users, UserX, UserCheck, Ban, Trash2, Eye, EyeOff } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Profile {
     id: string;
     full_name: string | null;
+    email: string | null;
     is_active: boolean;
+    is_hidden: boolean;
 }
 
 interface UserGroup {
@@ -48,6 +51,8 @@ const AdminUserManagement = () => {
     const [allGroups, setAllGroups] = useState<UserGroup[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isProcessing, setIsProcessing] = useState<string | null>(null);
+    const [showHidden, setShowHidden] = useState(false);
+    const [isTogglingHide, setIsTogglingHide] = useState<string | null>(null);
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -106,6 +111,7 @@ const AdminUserManagement = () => {
                 full_name: profile.full_name,
                 email: profile.email,
                 is_active: profile.is_active,
+                is_hidden: profile.is_hidden || false,
                 groups: membersMap.get(profile.id) || [],
             }));
 
@@ -263,6 +269,32 @@ const AdminUserManagement = () => {
         }
     };
 
+    const handleToggleHide = async (profile: UserWithGroups) => {
+        try {
+            setIsTogglingHide(profile.id);
+            const { error } = await (supabase as any)
+                .from("profiles")
+                .update({ is_hidden: !profile.is_hidden })
+                .eq("id", profile.id);
+
+            if (error) throw error;
+
+            toast({
+                title: profile.is_hidden ? "Usuário visível" : "Usuário ocultado",
+                description: profile.is_hidden ? "O usuário agora aparece na lista padrão." : "O usuário foi movido para os itens ocultos."
+            });
+            await loadData();
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Erro ao alterar visibilidade",
+                description: error.message,
+            });
+        } finally {
+            setIsTogglingHide(null);
+        }
+    };
+
     // Cleanup on unmount
     useEffect(() => {
         return () => {
@@ -272,8 +304,9 @@ const AdminUserManagement = () => {
 
     if (authLoading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>;
 
-    const activeUsers = users.filter(u => u.is_active);
-    const inactiveUsers = users.filter(u => !u.is_active);
+    const allFilteredUsers = users.filter(u => showHidden || !u.is_hidden);
+    const activeUsers = allFilteredUsers.filter(u => u.is_active);
+    const inactiveUsers = allFilteredUsers.filter(u => !u.is_active);
 
     const UserTable = ({ data, isActiveTab }: { data: UserWithGroups[], isActiveTab: boolean }) => (
         <Table>
@@ -288,16 +321,23 @@ const AdminUserManagement = () => {
             <TableBody>
                 {data.length === 0 ? (
                     <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                            Nenhum usuário encontrado nesta lista.
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            {showHidden ? "Nenhum usuário encontrado nesta lista." : "Nenhum usuário visível nesta lista."}
                         </TableCell>
                     </TableRow>
                 ) : (
                     data.map((user) => (
-                        <TableRow key={user.id}>
+                        <TableRow key={user.id} className={cn(user.is_hidden && "opacity-60 bg-muted/30")}>
                             <TableCell>
-                                <div className="font-medium">{user.full_name || "Sem Nome"}</div>
-                                <div className="text-xs text-muted-foreground">{user.email || "E-mail não disponível"}</div>
+                                <div className="flex items-center gap-2">
+                                    <div className="flex flex-col">
+                                        <div className="font-medium flex items-center gap-2">
+                                            {user.full_name || "Sem Nome"}
+                                            {user.is_hidden && <EyeOff className="h-3 w-3 text-muted-foreground" />}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">{user.email || "E-mail não disponível"}</div>
+                                    </div>
+                                </div>
                             </TableCell>
                             <TableCell>
                                 <div className="flex flex-wrap gap-2">
@@ -336,29 +376,46 @@ const AdminUserManagement = () => {
                                 </Select>
                             </TableCell>
                             <TableCell className="text-right">
-                                {isActiveTab ? (
+                                <div className="flex justify-end gap-1">
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                        title="Desativar Usuário"
-                                        onClick={() => toggleUserStatus(user.id, true)}
-                                        disabled={isProcessing === user.id}
+                                        onClick={() => handleToggleHide(user)}
+                                        disabled={isTogglingHide === user.id}
+                                        title={user.is_hidden ? "Mostrar na lista" : "Ocultar da lista"}
                                     >
-                                        <UserX className="h-5 w-5" />
+                                        {isTogglingHide === user.id ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : user.is_hidden ? (
+                                            <Eye className="h-4 w-4" />
+                                        ) : (
+                                            <EyeOff className="h-4 w-4" />
+                                        )}
                                     </Button>
-                                ) : (
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="text-green-600 hover:text-green-700 hover:bg-green-100"
-                                        title="Reativar Usuário"
-                                        onClick={() => toggleUserStatus(user.id, false)}
-                                        disabled={isProcessing === user.id}
-                                    >
-                                        <UserCheck className="h-5 w-5" />
-                                    </Button>
-                                )}
+                                    {isActiveTab ? (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            title="Desativar Usuário"
+                                            onClick={() => toggleUserStatus(user.id, true)}
+                                            disabled={isProcessing === user.id}
+                                        >
+                                            <UserX className="h-5 w-5" />
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="text-green-600 hover:text-green-700 hover:bg-green-100"
+                                            title="Reativar Usuário"
+                                            onClick={() => toggleUserStatus(user.id, false)}
+                                            disabled={isProcessing === user.id}
+                                        >
+                                            <UserCheck className="h-5 w-5" />
+                                        </Button>
+                                    )}
+                                </div>
                             </TableCell>
                         </TableRow>
                     ))
@@ -387,10 +444,26 @@ const AdminUserManagement = () => {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Usuários do Sistema</CardTitle>
-                        <CardDescription>
-                            Gerencie quem tem acesso ao sistema
-                        </CardDescription>
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <CardTitle>Usuários do Sistema</CardTitle>
+                                <CardDescription>
+                                    Gerencie quem tem acesso ao sistema
+                                </CardDescription>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowHidden(!showHidden)}
+                                className={cn(showHidden && "bg-muted")}
+                            >
+                                {showHidden ? (
+                                    <><Eye className="h-4 w-4 mr-2" /> Ocultar itens ocultos</>
+                                ) : (
+                                    <><EyeOff className="h-4 w-4 mr-2" /> Visualizar ocultos</>
+                                )}
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         {isLoading ? (
