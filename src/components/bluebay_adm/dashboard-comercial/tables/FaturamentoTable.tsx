@@ -1,111 +1,155 @@
 
 import React, { useState } from "react";
 import { Table, TableHeader, TableBody, TableRow, TableHead } from "@/components/ui/table";
-import { FaturamentoItem } from "@/services/bluebay/dashboardComercialTypes";
+import { FaturamentoItem, DailyFaturamento, PedidoItem } from "@/services/bluebay/dashboardComercialTypes";
 import { FaturamentoExpandableRow } from "./FaturamentoExpandableRow";
-import { format, parseISO } from "date-fns";
+import { parseISO } from "date-fns";
 
-interface GroupedFaturamento {
-  DATA_EMISSAO: string | Date;
-  notas: {
-    NOTA: string;
-    DATA_EMISSAO: string | Date;
-    TOTAL_QUANTIDADE: number;
-    TOTAL_VALOR: number;
-    items: FaturamentoItem[];
-  }[];
-}
-
+// --- Types ---
 interface FaturamentoTableProps {
-  faturamentoData: FaturamentoItem[];
+  dailyStats: DailyFaturamento[];
   isLoading: boolean;
+  onFetchDayDetails: (date: Date) => Promise<FaturamentoItem[]>;
+  onFetchDayOrders?: (date: Date) => Promise<PedidoItem[]>; // Optional now
+  monthlyStats?: any[];
+  startDate?: Date;
+  endDate?: Date;
+  onDateSelect?: (date: Date) => void;
 }
 
-export const FaturamentoTableContent: React.FC<FaturamentoTableProps> = ({ faturamentoData, isLoading }) => {
+interface FaturamentoTableContentProps {
+  dailyStats: DailyFaturamento[];
+  isLoading: boolean;
+  onFetchDayDetails: (date: Date) => Promise<FaturamentoItem[]>;
+}
+
+// --- Helper Functions ---
+const groupItemsByNote = (items: FaturamentoItem[], dateStr: string) => {
+  const grouped: any = {
+    DATA_EMISSAO: dateStr,
+    notas: []
+  };
+
+  const notasMap: Record<string, any> = {};
+
+  items.forEach(item => {
+    if (!item.NOTA) return;
+
+    if (!notasMap[item.NOTA]) {
+      notasMap[item.NOTA] = {
+        NOTA: item.NOTA,
+        DATA_EMISSAO: item.DATA_EMISSAO,
+        TOTAL_QUANTIDADE: 0,
+        TOTAL_VALOR: 0,
+        items: []
+      };
+      grouped.notas.push(notasMap[item.NOTA]);
+    }
+
+    const notaGroup = notasMap[item.NOTA];
+
+    const qty = Number(item.QUANTIDADE) || 0;
+    const valUnit = Number(item.VALOR_UNITARIO) || 0;
+    const valTotal = (item.VALOR_NOTA !== undefined && item.VALOR_NOTA !== null)
+      ? Number(item.VALOR_NOTA)
+      : (qty * valUnit);
+
+    notaGroup.TOTAL_QUANTIDADE += qty;
+    notaGroup.TOTAL_VALOR += valTotal;
+    notaGroup.items.push(item);
+  });
+
+  return grouped;
+};
+
+// --- Main Wrapper Component ---
+export const FaturamentoTable: React.FC<FaturamentoTableProps> = ({
+  dailyStats,
+  isLoading,
+  onFetchDayDetails
+}) => {
+  return (
+    <div className="border rounded-md p-4 bg-white shadow-sm">
+      <h3 className="text-lg font-semibold mb-4">Notas Fiscais Emitidas</h3>
+      <FaturamentoTableContent
+        dailyStats={dailyStats}
+        isLoading={isLoading}
+        onFetchDayDetails={onFetchDayDetails}
+      />
+    </div>
+  );
+};
+
+// --- Content Component (Invoices) ---
+export const FaturamentoTableContent: React.FC<FaturamentoTableContentProps> = ({
+  dailyStats,
+  isLoading,
+  onFetchDayDetails
+}) => {
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
 
-  // Agrupar faturamento por data e nota
-  const groupedByDate: Record<string, GroupedFaturamento> = {};
-  
-  // Filter out null or invalid items first
-  const validItems = Array.isArray(faturamentoData) ? 
-    faturamentoData.filter(item => item && item.DATA_EMISSAO && item.NOTA) : [];
-  
-  validItems.forEach(item => {
-    // Skip invalid items - ensure both DATA_EMISSAO and NOTA exist
-    if (!item || !item.DATA_EMISSAO || !item.NOTA) return;
-    
-    const dateStr = typeof item.DATA_EMISSAO === 'string' 
-      ? format(parseISO(item.DATA_EMISSAO), 'yyyy-MM-dd')
-      : format(item.DATA_EMISSAO, 'yyyy-MM-dd');
-    
-    if (!groupedByDate[dateStr]) {
-      groupedByDate[dateStr] = {
-        DATA_EMISSAO: item.DATA_EMISSAO,
-        notas: []
-      };
-    }
+  const [loadedData, setLoadedData] = useState<Record<string, FaturamentoItem[]>>({});
+  const [loadingDates, setLoadingDates] = useState<Set<string>>(new Set());
 
-    // Verificar se já temos essa nota no grupo da data
-    const notaExistente = groupedByDate[dateStr].notas.find(n => n && n.NOTA === item.NOTA);
-    
-    // Garantir valores numéricos válidos
-    const quantidade = Number(item.QUANTIDADE) || 0;
-    const valorUnitario = Number(item.VALOR_UNITARIO) || 0;
-    
-    if (notaExistente) {
-      notaExistente.TOTAL_QUANTIDADE += quantidade;
-      notaExistente.TOTAL_VALOR += quantidade * valorUnitario;
-      notaExistente.items.push(item);
-    } else {
-      groupedByDate[dateStr].notas.push({
-        NOTA: item.NOTA,
-        DATA_EMISSAO: item.DATA_EMISSAO,
-        TOTAL_QUANTIDADE: quantidade,
-        TOTAL_VALOR: quantidade * valorUnitario,
-        items: [item]
-      });
-    }
-  });
-  
-  // Converter para array e ordenar por data (mais recente primeiro)
-  const groupedFaturamentos = Object.values(groupedByDate).sort((a, b) => {
-    const dateA = new Date(a.DATA_EMISSAO).getTime();
-    const dateB = new Date(b.DATA_EMISSAO).getTime();
-    return dateB - dateA;
-  });
+  const toggleDate = async (dateStr: string) => {
+    const isExpanding = !expandedDates.has(dateStr);
 
-  const toggleDate = (dateStr: string) => {
     setExpandedDates(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(dateStr)) {
-        newSet.delete(dateStr);
-      } else {
-        newSet.add(dateStr);
-      }
+      if (isExpanding) newSet.add(dateStr);
+      else newSet.delete(dateStr);
       return newSet;
     });
+
+    if (isExpanding && !loadedData[dateStr]) {
+      setLoadingDates(prev => new Set(prev).add(dateStr));
+      try {
+        const dateObj = parseISO(dateStr);
+        const details = await onFetchDayDetails(dateObj);
+        setLoadedData(prev => ({ ...prev, [dateStr]: details }));
+      } catch (err) {
+        console.error("Failed to load details for date", dateStr, err);
+      } finally {
+        setLoadingDates(prev => {
+          const next = new Set(prev);
+          next.delete(dateStr);
+          return next;
+        });
+      }
+    }
   };
 
   const toggleNote = (nota: string) => {
     setExpandedNotes(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(nota)) {
-        newSet.delete(nota);
-      } else {
-        newSet.add(nota);
-      }
+      if (newSet.has(nota)) newSet.delete(nota);
+      else newSet.add(nota);
       return newSet;
     });
   };
 
-  if (groupedFaturamentos.length === 0) {
+  if (isLoading && (!dailyStats || dailyStats.length === 0)) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        Nenhuma nota fiscal encontrada para o período selecionado
+        Carregando dados...
       </div>
     );
+  }
+
+  if (!dailyStats || dailyStats.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        Nenhum registro encontrado para o período.
+      </div>
+    );
+  }
+
+  // Filter stats that have invoice data
+  const invoiceStats = dailyStats.filter(stat => (stat.total > 0 || (stat.faturamentoCount || 0) > 0));
+
+  if (invoiceStats.length === 0) {
+    return <div className="text-center py-8 text-muted-foreground">Nenhuma nota fiscal encontrada.</div>;
   }
 
   return (
@@ -120,11 +164,17 @@ export const FaturamentoTableContent: React.FC<FaturamentoTableProps> = ({ fatur
           </TableRow>
         </TableHeader>
         <TableBody>
-          {groupedFaturamentos.map((dateGroup) => {
-            const dateStr = typeof dateGroup.DATA_EMISSAO === 'string'
-              ? dateGroup.DATA_EMISSAO
-              : format(dateGroup.DATA_EMISSAO, 'yyyy-MM-dd');
-            
+          {invoiceStats.map((stat) => {
+            const dateStr = stat.date;
+
+            const details = loadedData[dateStr] || [];
+            const isLoaded = !!loadedData[dateStr];
+            const isLoadingDetails = loadingDates.has(dateStr);
+
+            const dateGroup = isLoaded
+              ? groupItemsByNote(details, dateStr)
+              : { DATA_EMISSAO: dateStr, notas: [] };
+
             return (
               <FaturamentoExpandableRow
                 key={dateStr}
@@ -134,6 +184,11 @@ export const FaturamentoTableContent: React.FC<FaturamentoTableProps> = ({ fatur
                 expandedNotes={expandedNotes}
                 toggleDate={toggleDate}
                 toggleNote={toggleNote}
+                stats={{
+                  totalCount: stat.faturamentoCount || 0,
+                  totalValue: stat.total
+                }}
+                isLoading={isLoadingDetails}
               />
             );
           })}

@@ -1,6 +1,7 @@
 
 import { useState, useCallback, useEffect } from "react";
-import { BluebayAdmBanner } from "@/components/bluebay_adm/BluebayAdmBanner";
+import { subDays } from "date-fns";
+
 import { BluebayAdmMenu } from "@/components/bluebay_adm/BluebayAdmMenu";
 import { DashboardComercialFilters } from "@/components/bluebay_adm/dashboard-comercial/DashboardComercialFilters";
 import { useDashboardComercial } from "@/hooks/bluebay_adm/dashboard/useDashboardComercial";
@@ -14,15 +15,43 @@ const BluebayAdmDashboardComercial = () => {
   const {
     dashboardData,
     isLoading,
+    isDetailsLoading,
     error,
     startDate,
     endDate,
     setDateRange,
     refreshData,
     selectedCentroCusto,
-    setSelectedCentroCusto
+    setSelectedCentroCusto,
+    selectedRepresentative,
+    setSelectedRepresentative,
+    fetchDayData,
+    fetchDayOrderData,
+    cityStats,
+    selectedCity,
+    setSelectedCity,
+    clientStats,
+    isClientLoading,
+    productStats,
+    isProductLoading
   } = useDashboardComercial();
-  
+
+  const handleDateSelect = useCallback((date: Date) => {
+    // When clicking a day on chart, set range to that day
+    setDateRange(date, date);
+    setDateRange(date, date);
+  }, [setDateRange]);
+
+  const handleClearFilters = useCallback(() => {
+    // Reset to default date range (30 days) and clear cost center
+    const today = new Date();
+    const thirtyDaysAgo = subDays(today, 30);
+    setDateRange(thirtyDaysAgo, today);
+    setSelectedCentroCusto(null);
+    setSelectedRepresentative(null);
+    setSelectedCity(null);
+  }, [setDateRange, setSelectedCentroCusto, setSelectedRepresentative, setSelectedCity]);
+
   const { toast } = useToast();
   const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
 
@@ -47,21 +76,19 @@ const BluebayAdmDashboardComercial = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-background">
-        <BluebayAdmBanner />
+        <BluebayAdmMenu />
         <div className="container mx-auto px-4 py-8">
-          <div className="mb-8">
-            <BluebayAdmMenu />
-          </div>
-          
+
+
           <h1 className="text-3xl font-bold mb-6">Dashboard Comercial</h1>
-          
+
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Erro ao carregar dados</AlertTitle>
             <AlertDescription>
               {error.message || "Não foi possível carregar os dados do dashboard. Tente novamente mais tarde."}
               <div className="mt-4">
-                <button 
+                <button
                   onClick={() => refreshData()}
                   className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/80"
                 >
@@ -77,20 +104,22 @@ const BluebayAdmDashboardComercial = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <BluebayAdmBanner />
+      <BluebayAdmMenu />
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <BluebayAdmMenu />
-        </div>
-        
+
+
         <h1 className="text-3xl font-bold mb-6">Dashboard Comercial</h1>
-        
+
         <DashboardComercialFilters
           startDate={startDate}
           endDate={endDate}
           onDateRangeChange={setDateRange}
           onRefresh={refreshData}
-          isLoading={isLoading}
+          isLoading={isLoading || isDetailsLoading}
+          selectedCentroCusto={selectedCentroCusto}
+          selectedRepresentative={selectedRepresentative}
+          onClearRepresentative={() => setSelectedRepresentative(null)}
+          onClearFilters={handleClearFilters}
         />
 
         {isLoading && isInitialLoad ? (
@@ -105,9 +134,20 @@ const BluebayAdmDashboardComercial = () => {
             dashboardData={dashboardData}
             selectedCentroCusto={selectedCentroCusto}
             setSelectedCentroCusto={setSelectedCentroCusto}
+            selectedRepresentative={selectedRepresentative}
+            setSelectedRepresentative={setSelectedRepresentative}
             isLoading={isLoading}
+            isDetailsLoading={isDetailsLoading}
             startDate={startDate}
             endDate={endDate}
+            onFetchDayDetails={fetchDayData}
+            onFetchDayOrders={fetchDayOrderData}
+            cityStats={cityStats}
+            onDateSelect={handleDateSelect}
+            selectedCity={selectedCity}
+            onCitySelect={setSelectedCity}
+            clientStats={clientStats}
+            isClientLoading={isClientLoading}
           />
         )}
       </div>

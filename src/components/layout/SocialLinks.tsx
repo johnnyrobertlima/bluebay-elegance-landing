@@ -1,4 +1,5 @@
-import { Instagram, Facebook, MessageCircle } from "lucide-react";
+
+import { Instagram, Facebook, MessageCircle, Music } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SocialLinksProps {
@@ -15,19 +16,25 @@ const SocialLinks = ({
   const socialLinks = [
     {
       name: "Instagram",
-      href: "https://instagram.com/bluebay",
+      href: "https://www.instagram.com/bluebayoficial",
       icon: Instagram,
       color: "hover:bg-pink-500",
     },
     {
       name: "Facebook",
-      href: "https://facebook.com/bluebay",
+      href: "https://www.facebook.com/bluebaycomercial",
       icon: Facebook,
       color: "hover:bg-blue-600",
     },
     {
+      name: "TikTok",
+      href: "https://www.tiktok.com/@bluebayoficial",
+      icon: Music,
+      color: "hover:bg-black",
+    },
+    {
       name: "WhatsApp",
-      href: "https://wa.me/5511999999999",
+      href: "https://wa.me/551126189778",
       icon: MessageCircle,
       color: "hover:bg-green-500",
     },

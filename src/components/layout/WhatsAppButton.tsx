@@ -1,3 +1,4 @@
+
 import { MessageCircle } from "lucide-react";
 
 interface WhatsAppButtonProps {
@@ -6,7 +7,7 @@ interface WhatsAppButtonProps {
 }
 
 const WhatsAppButton = ({
-  phoneNumber = "5511999999999",
+  phoneNumber = "551126189778",
   message = "Olá! Gostaria de saber mais sobre os produtos da Bluebay.",
 }: WhatsAppButtonProps) => {
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
@@ -22,7 +23,7 @@ const WhatsAppButton = ({
       <div className="relative">
         {/* Pulse effect */}
         <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-25" />
-        
+
         {/* Button */}
         <div className="relative flex items-center justify-center w-14 h-14 rounded-full bg-green-500 shadow-lg hover:bg-green-600 transition-all duration-300 hover:scale-110">
           <MessageCircle className="h-7 w-7 text-white" fill="white" />

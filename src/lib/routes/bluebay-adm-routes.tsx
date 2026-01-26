@@ -1,19 +1,20 @@
 import { Route } from "react-router-dom";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import BluebayAdmHome from "@/pages/BluebayAdmHome";
-import { 
-  BluebayAdmReports, 
-  BluebayAdmDashboard, 
-  BluebayAdmClients, 
-  BluebayAdmFinancial, 
-  BluebayAdmEstoque, 
-  BluebayAdmPedidos, 
-  BluebayAdmFinanceiroManager, 
+import {
+  BluebayAdmReports,
+  BluebayAdmDashboard,
+  BluebayAdmClients,
+  BluebayAdmFinancial,
+  BluebayAdmEstoque,
+  BluebayAdmPedidos,
+  BluebayAdmFinanceiroManager,
   BluebayAdmRequests,
-  BluebayAdmAnaliseDeCompra, 
+  BluebayAdmAnaliseDeCompra,
   BluebayAdmDashboardComercial,
   BluebayAdmItemGrupoManagement,
-  BluebayAdmEtiquetas
+  BluebayAdmEtiquetas,
+  BluebayAdmLandingPage
 } from "@/pages/bluebay_adm";
 import BluebayAdmStockSalesAnalytics from "@/pages/bluebay_adm/BluebayAdmStockSalesAnalytics";
 import BluebayAdmItemManagement from "@/pages/bluebay_adm/BluebayAdmItemManagement";
@@ -93,6 +94,11 @@ export const bluebayAdmRoutes = (
     <Route path="/client-area/bluebay_adm/requests" element={
       <PermissionGuard resourcePath="/client-area/bluebay_adm/requests">
         <BluebayAdmRequests />
+      </PermissionGuard>
+    } />
+    <Route path="/client-area/bluebay_adm/landing-page" element={
+      <PermissionGuard resourcePath="/client-area/bluebay_adm/dashboard">
+        <BluebayAdmLandingPage />
       </PermissionGuard>
     } />
   </>

@@ -1,3 +1,4 @@
+
 import {
   Table,
   TableBody,
@@ -19,6 +20,7 @@ interface ItemGroup {
   ativo: boolean;
   empresa_nome: string;
   empresa_id: string;
+  estacao_ano?: string; // Added field
 }
 
 interface ItemGroupTableProps {
@@ -35,17 +37,17 @@ export const ItemGroupTable = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 100;
-  
-  const filteredGroups = groups.filter(group => 
-    group.gru_codigo?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+
+  const filteredGroups = groups.filter(group =>
+    group.gru_codigo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     group.gru_descricao?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     group.empresa_nome?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  
+
   const totalPages = Math.ceil(filteredGroups.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedGroups = filteredGroups.slice(startIndex, startIndex + itemsPerPage);
-  
+
   if (isLoading) {
     return <ItemGroupTableSkeleton />;
   }
@@ -68,7 +70,7 @@ export const ItemGroupTable = ({
           />
         </div>
       </div>
-      
+
       <div className="rounded-md border">
         <div className="max-h-[600px] overflow-auto">
           <Table>
@@ -76,6 +78,7 @@ export const ItemGroupTable = ({
               <TableRow>
                 <TableHead className="w-[100px]">Código</TableHead>
                 <TableHead>Descrição</TableHead>
+                <TableHead className="w-[120px]">Estação</TableHead> {/* Added column */}
                 <TableHead className="w-[160px]">Empresa</TableHead>
                 <TableHead className="w-[80px]">Ativo</TableHead>
                 <TableHead className="w-[80px]">Ações</TableHead>
@@ -84,7 +87,7 @@ export const ItemGroupTable = ({
             <TableBody>
               {paginatedGroups.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={6} className="h-24 text-center"> {/* Increased colSpan */}
                     Nenhum grupo encontrado.
                   </TableCell>
                 </TableRow>
@@ -93,6 +96,7 @@ export const ItemGroupTable = ({
                   <TableRow key={group.id}>
                     <TableCell className="font-medium">{group.gru_codigo}</TableCell>
                     <TableCell>{group.gru_descricao}</TableCell>
+                    <TableCell>{group.estacao_ano || "-"}</TableCell> {/* Added cell */}
                     <TableCell>{group.empresa_nome || "Não definida"}</TableCell>
                     <TableCell>
                       {group.ativo ? (
@@ -117,12 +121,12 @@ export const ItemGroupTable = ({
           </Table>
         </div>
       </div>
-      
+
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => setCurrentPage(curr => Math.max(curr - 1, 1))}
             disabled={currentPage === 1}
           >
@@ -131,8 +135,8 @@ export const ItemGroupTable = ({
           <span className="text-sm">
             Página {currentPage} de {totalPages}
           </span>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => setCurrentPage(curr => Math.min(curr + 1, totalPages))}
             disabled={currentPage === totalPages}
           >

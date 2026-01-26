@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { Menu, X, Users, Receipt, BarChart2, FileText, ClipboardCheck, LogOut, FileSpreadsheet, Package, ShoppingBag, ShoppingCart, PackageCheck, Group, Tag, Search } from "lucide-react";
+import { Menu, X, Users, Receipt, BarChart2, FileText, ClipboardCheck, LogOut, FileSpreadsheet, Package, ShoppingBag, ShoppingCart, PackageCheck, Group, Tag, Search, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +26,7 @@ export const BluebayAdmMenu = () => {
     { name: "Relatório de Itens", path: "/client-area/bluebay_adm/reports", icon: <FileText className="h-4 w-4 mr-2" /> },
     { name: "Gerenciar Itens", path: "/client-area/bluebay_adm/item-management", icon: <PackageCheck className="h-4 w-4 mr-2" /> },
     { name: "Gerenciar Grupos", path: "/client-area/bluebay_adm/item-grupo-management", icon: <Group className="h-4 w-4 mr-2" /> },
+    { name: "Página Inicial", path: "/client-area/bluebay_adm/landing-page", icon: <LayoutDashboard className="h-4 w-4 mr-2" /> },
     { name: "Solicitações", path: "/client-area/bluebay_adm/requests", icon: <ClipboardCheck className="h-4 w-4 mr-2" /> },
   ];
 
@@ -71,7 +72,7 @@ export const BluebayAdmMenu = () => {
                 </NavLink>
               ))}
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
@@ -146,7 +147,7 @@ export const BluebayAdmMenu = () => {
                   {item.name}
                 </NavLink>
               ))}
-              
+
               <button
                 onClick={handleLogout}
                 className="flex w-full items-center px-4 py-2 text-sm rounded-md transition-colors text-white bg-blue-700 hover:bg-blue-800"

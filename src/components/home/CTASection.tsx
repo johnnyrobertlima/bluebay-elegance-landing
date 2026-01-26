@@ -7,7 +7,7 @@ const CTASection = () => {
     <section className="py-24 relative overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 gradient-elegant opacity-95" />
-      
+
       {/* Decorative Elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-0 left-1/4 w-72 h-72 rounded-full bg-background/5 blur-3xl" />
@@ -29,8 +29,8 @@ const CTASection = () => {
           </h2>
 
           <p className="font-body text-lg text-background/70 mb-10 leading-relaxed">
-            Como cliente Bluebay, você tem acesso exclusivo ao nosso catálogo digital 
-            completo, pode fazer pedidos online, acompanhar o histórico de compras 
+            Como cliente Bluebay, você tem acesso exclusivo ao nosso catálogo digital
+            completo, pode fazer pedidos online, acompanhar o histórico de compras
             e baixar materiais promocionais.
           </p>
 
@@ -48,7 +48,7 @@ const CTASection = () => {
               <Button
                 variant="outline"
                 size="lg"
-                className="border-background/30 text-background hover:bg-background/10 font-body font-medium px-8 py-6 text-base"
+                className="border-background/30 text-primary bg-background hover:bg-background/10 hover:text-white font-body font-medium px-8 py-6 text-base"
               >
                 Quero Ser Cliente
               </Button>

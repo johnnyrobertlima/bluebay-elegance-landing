@@ -23,6 +23,9 @@ export interface FaturamentoItem {
   CENTRO_CUSTO?: string;
   DATA_PEDIDO?: string | Date | null;
   REPRESENTANTE?: number | null;
+  RAZAOSOCIAL?: string | null;
+  APELIDO?: string | null;
+  DESCRICAO?: string | null;
   // Add the pedido relation
   pedido?: {
     CENTROCUSTO?: string;
@@ -80,12 +83,16 @@ export interface PedidoItem {
   CENTROCUSTO?: string;
   CENTRO_CUSTO?: string; // Added for compatibility with the materialized view
   REPRESENTANTE?: number; // Added the missing REPRESENTANTE property
+  APELIDO?: string; // Fetched from BLUEBAY_PESSOA
+  DESCRICAO?: string; // Fetched from BLUEBAY_ITEM
 }
 
 export interface DailyFaturamento {
   date: string;
   total: number;
+  faturamentoCount?: number;
   pedidoTotal: number;
+  pedidoCount?: number;
   formattedDate: string;
 }
 
@@ -96,6 +103,43 @@ export interface MonthlyFaturamento {
   formattedMonth: string;
 }
 
+export interface DashboardComercialStats {
+  daily: DailyFaturamento[];
+  monthly: MonthlyFaturamento[];
+  totals: {
+    totalFaturado: number;
+    totalItens: number;
+    mediaValorItem: number;
+    totalPedidosValue: number;
+    totalPedidosQty: number;
+  };
+  costCenters: {
+    nome: string;
+    totalFaturado: number;
+    totalItensFaturados: number;
+    totalPedidos: number;
+    totalItensPedidos: number;
+    ticketMedioFaturado: number;
+  }[];
+  representativeStats?: {
+    id: string;
+    nome: string;
+    totalFaturado: number;
+    totalItensFaturados: number;
+    totalPedidos: number;
+    totalItensPedidos: number;
+    ticketMedioFaturado: number;
+  }[];
+  cityStats?: CitySalesStat[];
+}
+
+export interface CitySalesStat {
+  city: string;
+  uf: string;
+  totalFaturado: number;
+  totalPedidos: number;
+}
+
 export interface DashboardComercialData {
   dailyFaturamento: DailyFaturamento[];
   monthlyFaturamento: MonthlyFaturamento[];
@@ -104,6 +148,9 @@ export interface DashboardComercialData {
   mediaValorItem: number;
   faturamentoItems: FaturamentoItem[];
   pedidoItems: PedidoItem[];
+  costCenterStats?: DashboardComercialStats['costCenters']; // Added for staged loading
+  representativeStats?: DashboardComercialStats['representativeStats']; // Added
+  totals?: DashboardComercialStats['totals']; // Added
   dataRangeInfo: {
     startDateRequested: string;
     endDateRequested: string;
@@ -111,4 +158,47 @@ export interface DashboardComercialData {
     endDateActual: string | null;
     hasCompleteData: boolean;
   };
+  clientStats?: ClientStat[];
+  productStats?: ProductCategoryStat[];
+}
+
+export interface ProductCategoryStat {
+  GRU_DESCRICAO: string;
+  VALOR_PEDIDO: number;
+  QTDE_ITENS: number;
+  VALOR_FATURADO: number;
+  QTDE_FATURADA: number;
+  TM: number;
+  items: ProductItemStat[];
+}
+
+export interface ProductItemStat {
+  ITEM_CODIGO: string;
+  DESCRICAO: string;
+  VALOR_PEDIDO: number;
+  QTDE_ITENS: number;
+  VALOR_FATURADO: number;
+  QTDE_FATURADA: number;
+  TM: number;
+  orders: {
+    PED_NUMPEDIDO: string;
+    APELIDO: string;
+    DATA_PEDIDO: string;
+    QTDE_PEDIDA: number;
+    VALOR_UNITARIO: number;
+    VALOR_TOTAL: number;
+    QTDE_ENTREGUE: number;
+    VALOR_FATURADO: number;
+  }[];
+}
+
+export interface ClientStat {
+  PES_CODIGO: string; // Keep as string for map keys usually, or number? DB is number. Let's use string for flexibility in keys.
+  APELIDO: string;
+  NOME_CATEGORIA?: string;
+  TOTAL_FATURADO: number;
+  ITENS_FATURADOS: number;
+  TM_ITEM_FATURADO: number;
+  TOTAL_PEDIDO: number;
+  ITENS_PEDIDOS: number;
 }

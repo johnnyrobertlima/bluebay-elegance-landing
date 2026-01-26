@@ -1,9 +1,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  fetchGroups, 
-  fetchEmpresas, 
+import {
+  fetchGroups,
+  fetchEmpresas,
   saveGroup,
   deleteGroup,
   exportGroupsToExcel,
@@ -16,7 +16,8 @@ interface ItemGroup {
   gru_descricao: string;
   ativo: boolean;
   empresa_nome: string;
-  empresa_id: string; // Adding this required property to fix the type error
+  empresa_id: string;
+  estacao_ano?: string; // Added field
 }
 
 export const useItemGroupManagement = () => {
@@ -30,13 +31,13 @@ export const useItemGroupManagement = () => {
     try {
       setIsLoading(true);
       console.log("Loading data for item group management...");
-      
+
       // Load data concurrently for better performance
       const [fetchedGroups, fetchedEmpresas] = await Promise.all([
         fetchGroups(),
         fetchEmpresas()
       ]);
-      
+
       console.log(`Loaded ${fetchedGroups.length} groups`);
       setGroups(fetchedGroups);
       setEmpresas(fetchedEmpresas);
@@ -60,14 +61,14 @@ export const useItemGroupManagement = () => {
     try {
       setIsLoading(true);
       await saveGroup(groupData);
-      
+
       toast({
         title: "Sucesso",
-        description: groupData.id 
-          ? "Grupo atualizado com sucesso!" 
+        description: groupData.id
+          ? "Grupo atualizado com sucesso!"
           : "Novo grupo criado com sucesso!",
       });
-      
+
       // Refresh data to ensure consistency
       await loadData();
       return true;
@@ -88,12 +89,12 @@ export const useItemGroupManagement = () => {
     try {
       setIsLoading(true);
       await deleteGroup(id);
-      
+
       toast({
         title: "Sucesso",
         description: "Grupo excluído com sucesso!",
       });
-      
+
       await loadData();
       return true;
     } catch (error: any) {
@@ -121,7 +122,7 @@ export const useItemGroupManagement = () => {
       }
 
       exportGroupsToExcel(groups);
-      
+
       toast({
         title: "Exportação concluída",
         description: `${groups.length} grupos exportados com sucesso.`,
@@ -141,12 +142,12 @@ export const useItemGroupManagement = () => {
       setIsLoading(true);
       const result = await importGroupsFromExcel(file);
       const importedCount = result?.count || 0;
-      
+
       toast({
         title: "Importação concluída",
         description: `${importedCount} grupos importados com sucesso.`,
       });
-      
+
       await loadData();
     } catch (error: any) {
       console.error("Error importing groups:", error);

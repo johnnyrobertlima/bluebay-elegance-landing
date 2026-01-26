@@ -65,6 +65,7 @@ export default {
           light: "hsl(var(--bluebay-light))",
           gold: "hsl(var(--bluebay-gold))",
           cream: "hsl(var(--bluebay-cream))",
+          "beige-dark": "hsl(var(--bluebay-beige-dark))",
         },
       },
       fontFamily: {

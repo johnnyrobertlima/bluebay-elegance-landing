@@ -12,6 +12,7 @@ import BluebayAdmDashboardComercial from './BluebayAdmDashboardComercial';
 import BluebayAdmItemManagement from './BluebayAdmItemManagement';
 import BluebayAdmItemGrupoManagement from './BluebayAdmItemGrupoManagement';
 import BluebayAdmEtiquetas from './BluebayAdmEtiquetas';
+import BluebayAdmLandingPage from './BluebayAdmLandingPage';
 
 export {
   BluebayAdmReports,
@@ -26,5 +27,6 @@ export {
   BluebayAdmDashboardComercial,
   BluebayAdmItemManagement,
   BluebayAdmItemGrupoManagement,
-  BluebayAdmEtiquetas
+  BluebayAdmEtiquetas,
+  BluebayAdmLandingPage
 };

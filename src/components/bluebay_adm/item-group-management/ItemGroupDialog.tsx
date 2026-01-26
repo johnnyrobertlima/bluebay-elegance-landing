@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ interface ItemGroup {
   ativo: boolean;
   empresa_nome?: string;
   empresa_id?: string;
+  estacao_ano?: string; // Added field
 }
 
 interface ItemGroupDialogProps {
@@ -33,6 +35,7 @@ export const ItemGroupDialog = ({
     GRU_CODIGO: "",
     GRU_DESCRICAO: "",
     empresa: "nao_definida",
+    estacao_ano: "", // Added field
     ativo: true
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,6 +48,7 @@ export const ItemGroupDialog = ({
         GRU_CODIGO: selectedGroup.gru_codigo || "",
         GRU_DESCRICAO: selectedGroup.gru_descricao || "",
         empresa: selectedGroup.empresa_nome || "nao_definida",
+        estacao_ano: selectedGroup.estacao_ano || "", // Added field
         ativo: selectedGroup.ativo !== undefined ? selectedGroup.ativo : true
       });
     } else {
@@ -53,6 +57,7 @@ export const ItemGroupDialog = ({
         GRU_CODIGO: "",
         GRU_DESCRICAO: "",
         empresa: "nao_definida",
+        estacao_ano: "", // Added field
         ativo: true
       });
     }
@@ -108,6 +113,23 @@ export const ItemGroupDialog = ({
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="estacao_ano">Estação do Ano</Label>
+          <Select
+            value={formData.estacao_ano}
+            onValueChange={(value) => handleChange("estacao_ano", value)}
+          >
+            <SelectTrigger id="estacao_ano">
+              <SelectValue placeholder="Selecione a estação" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Primavera / Verão">Primavera / Verão</SelectItem>
+              <SelectItem value="Outono / Inverno">Outono / Inverno</SelectItem>
+              <SelectItem value="Todas">Todas</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">

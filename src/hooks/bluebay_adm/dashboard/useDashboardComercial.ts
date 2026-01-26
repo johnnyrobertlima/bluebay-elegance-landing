@@ -1,15 +1,23 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { subDays } from 'date-fns';
-import { useToast } from '@/components/ui/use-toast';
-import { 
-  fetchDashboardComercialData
+import { toast } from '@/hooks/use-toast';
+import {
+  fetchDashboardStats,
+  fetchDashboardDetails,
+  fetchDashboardOrders,
+  fetchDailyDetails,
+  fetchDailyOrders,
+  fetchCityStatsV2,
+  fetchProductStats,
+  fetchClientStats
 } from '@/services/bluebay/dashboardComercialService';
-import { DashboardComercialData } from '@/services/bluebay/dashboardComercialTypes';
+import { DashboardComercialData, FaturamentoItem, PedidoItem, ClientStat, ProductCategoryStat, CitySalesStat } from '@/services/bluebay/dashboardComercialTypes';
 
 interface UseDashboardComercialReturn {
   dashboardData: DashboardComercialData | null;
   isLoading: boolean;
+  isDetailsLoading: boolean;
   error: Error | null;
   startDate: Date;
   endDate: Date;
@@ -17,6 +25,19 @@ interface UseDashboardComercialReturn {
   refreshData: () => Promise<void>;
   selectedCentroCusto: string | null;
   setSelectedCentroCusto: (centroCusto: string | null) => void;
+  fetchDayData: (date: Date) => Promise<FaturamentoItem[]>;
+  fetchDayOrderData: (date: Date) => Promise<PedidoItem[]>;
+  selectedRepresentative: string | null;
+  setSelectedRepresentative: (rep: string | null) => void;
+  cityStats: CitySalesStat[];
+  isCityLoading: boolean;
+  selectedCity: { city: string; uf: string } | null;
+  setSelectedCity: (city: { city: string; uf: string } | null) => void;
+  // New States
+  productStats: ProductCategoryStat[];
+  isProductLoading: boolean;
+  clientStats: ClientStat[];
+  isClientLoading: boolean;
 }
 
 const defaultData: DashboardComercialData = {
@@ -37,196 +58,276 @@ const defaultData: DashboardComercialData = {
 };
 
 export const useDashboardComercial = (): UseDashboardComercialReturn => {
-  // Usar período inicial menor para melhorar performance
   const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 30));
   const [endDate, setEndDate] = useState<Date>(new Date());
+  // City Filtering
+  const [selectedCity, setSelectedCity] = useState<{ city: string; uf: string } | null>(null);
+
+  // Lazy Stats
+  const [cityStats, setCityStats] = useState<CitySalesStat[]>([]);
+  const [isCityLoading, setIsCityLoading] = useState(false);
+
+  const [productStats, setProductStats] = useState<ProductCategoryStat[]>([]);
+  const [isProductLoading, setIsProductLoading] = useState(false);
+
+  const [clientStats, setClientStats] = useState<ClientStat[]>([]);
+  const [isClientLoading, setIsClientLoading] = useState(false);
+
   const [selectedCentroCusto, setSelectedCentroCusto] = useState<string | null>(null);
-  
+  const [selectedRepresentative, setSelectedRepresentative] = useState<string | null>(null);
+
   const [dashboardData, setDashboardData] = useState<DashboardComercialData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isDetailsLoading, setIsDetailsLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
   const [requestId, setRequestId] = useState<number>(0);
-  
-  const { toast } = useToast();
-  
-  // Refs para controle de requisições e evitar vazamento de memória
+
+  // Refs for request control
   const isMountedRef = useRef<boolean>(true);
   const activeRequestRef = useRef<AbortController | null>(null);
-  const requestInProgressRef = useRef<boolean>(false);
 
-  // Validar intervalo de datas
-  const validateDateRange = useCallback(() => {
-    const today = new Date();
-    const oneYearAgo = subDays(today, 365);
-    
-    // Se o intervalo for maior que um ano, ajustar para um período mais razoável
-    if (endDate.getTime() - startDate.getTime() > 365 * 24 * 60 * 60 * 1000) {
-      toast({
-        title: "Intervalo de datas muito grande",
-        description: "Para melhor performance, o período foi limitado a 90 dias.",
-        variant: "destructive",
-      });
-      
-      setStartDate(subDays(endDate, 90));
-      return false;
-    }
-    
-    // Se a data inicial for muito antiga, ajustar para um ano atrás
-    if (startDate < oneYearAgo) {
-      toast({
-        title: "Data muito antiga",
-        description: "A data inicial foi ajustada para um período mais recente.",
-        variant: "destructive",
-      });
-      
-      setStartDate(oneYearAgo);
-      return false;
-    }
-    
-    return true;
-  }, [startDate, endDate, toast]);
-
+  // setDateRange needs to be stable
   const setDateRange = useCallback((start: Date, end: Date) => {
-    console.log(`Definindo novo intervalo de datas: ${start.toISOString()} até ${end.toISOString()}`);
     setStartDate(start);
     setEndDate(end);
     setRequestId(prev => prev + 1);
   }, []);
 
+  // Main fetch function
   const fetchData = useCallback(async () => {
-    // Evitar requisições duplicadas
-    if (requestInProgressRef.current) {
-      console.log('Fetching already in progress, skipping duplicate request');
+    // 1. Validate internal date range logic inline
+    const today = new Date();
+    const oneYearAgo = subDays(today, 365);
+
+    if (endDate.getTime() - startDate.getTime() > 365 * 24 * 60 * 60 * 1000) {
+      toast({
+        title: "Período ajustado",
+        description: "O período foi limitado a 90 dias para melhor performance.",
+        variant: "destructive",
+      });
+      setStartDate(subDays(endDate, 90));
       return;
     }
-    
-    // Validar o intervalo de datas antes de buscar
-    if (!validateDateRange()) {
+
+    if (startDate < oneYearAgo) {
+      setStartDate(oneYearAgo);
       return;
     }
-    
-    requestInProgressRef.current = true;
-    setIsLoading(true);
-    setError(null);
-    
-    // Cancelar requisição anterior se existir
+
+    // 2. Cancel previous request
     if (activeRequestRef.current) {
       activeRequestRef.current.abort();
     }
-    
-    // Criar um novo controlador de aborto para esta requisição
-    activeRequestRef.current = new AbortController();
-    
+
+    // 3. Start new request
+    const controller = new AbortController();
+    activeRequestRef.current = controller;
+    const signal = controller.signal;
+
+    setIsLoading(true);
+    setIsDetailsLoading(false);
+    setError(null);
+
     try {
-      console.log(`Iniciando busca de dados: ${startDate.toISOString()} até ${endDate.toISOString()}`);
-      if (selectedCentroCusto) {
-        console.log(`Filtrando por centro de custo: ${selectedCentroCusto}`);
+      console.log(`[HOOK] Iniciando busca ESTAGIADA: ${startDate.toISOString()} até ${endDate.toISOString()}`);
+
+      let stats;
+
+      if (selectedCity) {
+        // Use the new City-specific service
+        console.log(`[HOOK] Modo Filtro por Cidade: ${selectedCity.city}-${selectedCity.uf}`);
+        // Import dynamically or assume it's imported? It is not imported yet.
+        // We need to update imports.
+        const { fetchDashboardStatsByCity } = await import('@/services/bluebay/dashboardComercialService');
+
+        stats = await fetchDashboardStatsByCity(
+          startDate,
+          endDate,
+          selectedCity.city,
+          selectedCity.uf,
+          selectedCentroCusto,
+          selectedRepresentative
+        );
+
+      } else {
+        // Standard RPC fetch
+        stats = await fetchDashboardStats(
+          startDate,
+          endDate,
+          selectedCentroCusto,
+          selectedRepresentative,
+          signal
+        );
       }
-      
-      // Adicionar um timeout para evitar travamentos em caso de resposta lenta
-      const fetchPromise = fetchDashboardComercialData(startDate, endDate, selectedCentroCusto);
-      const timeoutPromise = new Promise<DashboardComercialData | null>((_, reject) => {
-        setTimeout(() => reject(new Error('Timeout: A busca demorou muito tempo')), 30000);
-      });
-      
-      // Usar Promise.race para implementar um timeout
-      const data = await Promise.race([fetchPromise, timeoutPromise]);
-      
-      // Verificar se o componente ainda está montado
+
+      if (signal.aborted) return;
       if (!isMountedRef.current) return;
-      
-      // Tratar os dados recebidos
-      if (data) {
-        setDashboardData(data);
-        console.log(`Dados carregados com sucesso: ${data.faturamentoItems.length} registros de faturamento, ${data.pedidoItems.length} registros de pedidos`);
-      
-        if (data.faturamentoItems.length === 0 && data.pedidoItems.length === 0) {
-          toast({
-            title: "Sem dados disponíveis",
-            description: "Não foram encontrados dados para o período selecionado.",
-            variant: "destructive",
-          });
-        } 
-        else {
-          toast({
-            title: "Dados carregados com sucesso",
-            description: `Foram encontrados ${data.faturamentoItems.length} registros de faturamento e ${data.pedidoItems.length} registros de pedidos para o período.`,
-            variant: "default",
-          });
-        }
-      }
+
+      const statsData: DashboardComercialData = {
+        dailyFaturamento: stats.dailyFaturamento || [],
+        monthlyFaturamento: stats.monthlyFaturamento || [],
+        totalFaturado: stats.totalFaturado || 0,
+        totalItens: stats.totalItens || 0,
+        mediaValorItem: stats.mediaValorItem || 0,
+        faturamentoItems: [],
+        pedidoItems: [],
+        costCenterStats: stats.costCenterStats,
+        representativeStats: stats.representativeStats,
+        dataRangeInfo: stats.dataRangeInfo || defaultData.dataRangeInfo
+      };
+
+      setDashboardData(statsData);
+      setIsLoading(false);
+      setIsDetailsLoading(false);
+
     } catch (err) {
-      // Ignorar erros de aborto (causados por cancelamento intencional)
-      if (err instanceof Error && err.name === 'AbortError') {
-        console.log('Requisição cancelada intencionalmente');
-        return;
-      }
-      
-      // Tratar outros erros
-      console.error('Erro ao buscar dados do dashboard comercial:', err);
-      
+      if (signal.aborted) return;
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+
+      console.error('Erro ao buscar dados:', err);
       if (!isMountedRef.current) return;
-      
-      setError(err instanceof Error ? err : new Error('Erro desconhecido ao buscar dados'));
+
+      setError(err instanceof Error ? err : new Error('Erro desconhecido'));
       toast({
         title: "Erro ao carregar dados",
-        description: "Não foi possível carregar os dados do dashboard. Tente novamente mais tarde.",
+        description: "Falha ao carregar o dashboard.",
         variant: "destructive",
       });
-      
-      // Definir dados padrão em caso de erro para evitar problemas de UI
-      setDashboardData(defaultData);
+
+      setDashboardData(prev => prev || defaultData);
     } finally {
-      if (isMountedRef.current) {
+      if (isMountedRef.current && activeRequestRef.current === controller) {
         setIsLoading(false);
+        setIsDetailsLoading(false);
+        activeRequestRef.current = null;
       }
-      requestInProgressRef.current = false;
-      activeRequestRef.current = null;
     }
-  }, [startDate, endDate, toast, validateDateRange, selectedCentroCusto]);
+  }, [startDate, endDate, selectedCentroCusto, selectedRepresentative, selectedCity]); // Added selectedCity
 
   const refreshData = useCallback(async () => {
-    if (isLoading) return;
-    
-    toast({
-      title: "Atualizando dados",
-      description: "Carregando informações mais recentes...",
-    });
-    
-    setRequestId(prev => prev + 1);
-  }, [isLoading, toast]);
+    if (isLoading || isDetailsLoading) return;
 
-  // Effect para carregar dados quando mudar o requestId ou o centro de custo
+    toast({
+      title: "Atualizando",
+      description: "Buscando dados recentes...",
+    });
+    setRequestId(prev => prev + 1);
+  }, [isLoading, isDetailsLoading]);
+
+  // Effect to trigger fetch
   useEffect(() => {
-    console.log(`Efeito chamado para busca de dados: requestId=${requestId}, centroCusto=${selectedCentroCusto || 'none'}`);
     fetchData();
-    
-    // Função de cleanup para lidar com desmontagem
+
     return () => {
+      // Cancel request on unmount or dependency change
       if (activeRequestRef.current) {
         activeRequestRef.current.abort();
       }
     };
-  }, [fetchData, requestId, selectedCentroCusto]);
+  }, [fetchData, requestId]); // Removed selectedCentroCusto from dependency array as it's already in fetchData dependencies
 
-  // Effect para definir o status de montagem
+  // Mount effect
   useEffect(() => {
     isMountedRef.current = true;
-    
     return () => {
       isMountedRef.current = false;
     };
   }, []);
 
+  /* New Lazy Loading Helpers */
+  const fetchDayData = useCallback(async (date: Date) => {
+    // Check if checks are needed or state update
+    // For now, we return the promise so the component can wait
+    const result = await fetchDailyDetails(date, selectedCentroCusto, selectedRepresentative); // Lazy load might not need same global signal, or maybe it should?
+    // Ideally we should track this request too if we want to cancel it on unmount.
+    // For now, let's leave it as is, or pass a new signal if needed.
+    return result;
+  }, [selectedCentroCusto]);
+
+  const fetchDayOrderData = useCallback(async (date: Date) => {
+    const result = await fetchDailyOrders(date, selectedCentroCusto, selectedRepresentative);
+    return result;
+  }, [selectedCentroCusto, selectedRepresentative]);
+
+  // Fetch Lazy Data (Products, Cities)
+  useEffect(() => {
+    async function fetchLazyStats() {
+      // Use requested date range to keep map consistent regardless of data sparsity in the filtered view
+      if (!startDate || !endDate) return;
+
+      setIsCityLoading(true);
+      // console.log('[HOOK] Fetching Lazy Stats (City)...');
+
+      const formattedStartDate = startDate.toISOString().split('T')[0];
+      const formattedEndDate = endDate.toISOString().split('T')[0];
+
+      try {
+        const cities = await fetchCityStatsV2(
+          formattedStartDate,
+          formattedEndDate,
+          { centroCusto: selectedCentroCusto, representative: selectedRepresentative }
+        );
+        console.log('[HOOK] Received Cities:', cities.length);
+        setCityStats(cities);
+      } catch (err) {
+        console.error('[HOOK] Error fetching city stats:', err);
+      } finally {
+        setIsCityLoading(false);
+      }
+    }
+
+    fetchLazyStats();
+  }, [startDate, endDate, selectedCentroCusto, selectedRepresentative]);
+
+  // Lazy Load Products
+  useEffect(() => {
+    async function fetchProducts() {
+      setIsProductLoading(true);
+      try {
+        const stats = await fetchProductStats(startDate, endDate, selectedCentroCusto, selectedRepresentative);
+        setProductStats(stats);
+      } catch (err) { console.error(err); }
+      finally { setIsProductLoading(false); }
+    }
+    fetchProducts();
+  }, [startDate, endDate, selectedCentroCusto, selectedRepresentative]);
+
+  // Lazy Load Clients
+  useEffect(() => {
+    async function fetchClients() {
+      setIsClientLoading(true);
+      try {
+        const stats = await fetchClientStats(startDate, endDate, selectedCentroCusto, selectedRepresentative);
+        console.log(`[HOOK] ClientStats fetched: ${stats.length} items`);
+        setClientStats(stats);
+      } catch (err) { console.error('[HOOK] ClientStats Error:', err); }
+      finally { setIsClientLoading(false); }
+    }
+    fetchClients();
+  }, [startDate, endDate, selectedCentroCusto, selectedRepresentative]);
+
   return {
     dashboardData,
     isLoading,
+    isDetailsLoading,
+    cityStats,
+    isCityLoading,
     error,
     startDate,
     endDate,
     setDateRange,
     refreshData,
     selectedCentroCusto,
-    setSelectedCentroCusto
+    setSelectedCentroCusto,
+    selectedRepresentative,
+    setSelectedRepresentative,
+    selectedCity,
+    setSelectedCity,
+    fetchDayData,
+    fetchDayOrderData,
+    productStats,
+    isProductLoading,
+    clientStats,
+    isClientLoading
   };
 };

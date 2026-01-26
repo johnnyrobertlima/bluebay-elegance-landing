@@ -1,13 +1,45 @@
-import { Instagram } from "lucide-react";
+
+import { useState, useEffect } from "react";
+import { Instagram, Loader2 } from "lucide-react";
 import SocialLinks from "@/components/layout/SocialLinks";
+import { fetchInstagramConfig, InstagramConfigData } from "@/services/bluebay_adm/landingPageService";
 
 const SocialSection = () => {
-  const instagramPosts = [
-    "https://images.unsplash.com/photo-1617127365659-c47fa864d8bc?w=400&h=400&fit=crop",
-    "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=400&fit=crop",
-    "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&h=400&fit=crop",
-    "https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=400&h=400&fit=crop",
-  ];
+  const [data, setData] = useState<InstagramConfigData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const config = await fetchInstagramConfig();
+      if (config) {
+        setData(config);
+      }
+      setIsLoading(false);
+    };
+    loadData();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <section className="py-24 bg-muted flex justify-center">
+        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+      </section>
+    );
+  }
+
+  const config = data || {
+    username: "@bluebayoficial",
+    title: "@bluebayoficial no Instagram",
+    subtitle: "Acompanhe nossas novidades, lançamentos e inspire-se com nossos looks exclusivos nas redes sociais.",
+    manual_posts: [
+      { image_url: "https://images.unsplash.com/photo-1617127365659-c47fa864d8bc?w=400&h=400&fit=crop", link: "https://www.instagram.com/bluebayoficial" },
+      { image_url: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=400&fit=crop", link: "https://www.instagram.com/bluebayoficial" },
+      { image_url: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&h=400&fit=crop", link: "https://www.instagram.com/bluebayoficial" },
+      { image_url: "https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=400&h=400&fit=crop", link: "https://www.instagram.com/bluebayoficial" },
+    ]
+  };
+
+  const instagramPosts = config.manual_posts.slice(0, 4);
 
   return (
     <section className="py-24 bg-muted">
@@ -18,13 +50,12 @@ const SocialSection = () => {
             Siga-nos
           </span>
           <h2 className="font-display text-4xl md:text-5xl font-bold text-foreground mb-6">
-            @bluebay no Instagram
+            {config.title}
           </h2>
           <p className="font-body text-muted-foreground leading-relaxed mb-8">
-            Acompanhe nossas novidades, lançamentos e inspire-se com nossos looks 
-            exclusivos nas redes sociais.
+            {config.subtitle}
           </p>
-          
+
           {/* Social Links */}
           <div className="flex justify-center">
             <SocialLinks size="lg" />
@@ -36,14 +67,14 @@ const SocialSection = () => {
           {instagramPosts.map((post, index) => (
             <a
               key={index}
-              href="https://instagram.com/bluebay"
+              href={post.link || `https://instagram.com/${config.username.replace('@', '')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="group relative aspect-square overflow-hidden rounded-lg"
             >
               <img
-                src={post}
-                alt={`Instagram post ${index + 1}`}
+                src={post.image_url}
+                alt={(post as any).caption || `Instagram post ${index + 1}`}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
               />
               <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/50 flex items-center justify-center transition-all duration-300">
@@ -56,7 +87,7 @@ const SocialSection = () => {
         {/* CTA */}
         <div className="text-center mt-10">
           <a
-            href="https://instagram.com/bluebay"
+            href={`https://instagram.com/${config.username.replace('@', '')}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 font-body font-medium text-primary hover:text-primary/80 transition-colors duration-200"

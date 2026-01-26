@@ -1,109 +1,110 @@
-
-import React, { useState } from "react";
-import { Table, TableHeader, TableBody, TableRow, TableHead } from "@/components/ui/table";
-import { PedidoItem } from "@/services/bluebay/dashboardComercialTypes";
-import { PedidoExpandableRow } from "./PedidoExpandableRow";
+import React, { useState } from 'react';
+import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
+import { PedidoItem, DailyFaturamento } from "@/services/bluebay/dashboardComercialTypes";
 import { format, parseISO } from "date-fns";
+import { Loader2 } from 'lucide-react';
+import { PedidosExpandableRow } from './PedidosExpandableRow';
 
-interface GroupedPedido {
-  DATA_PEDIDO: string | Date;
-  pedidos: {
-    PED_NUMPEDIDO: string;
-    PED_ANOBASE: number;
-    DATA_PEDIDO: string | Date;
-    TOTAL_QUANTIDADE: number;
-    TOTAL_VALOR: number;
-    items: PedidoItem[];
-  }[];
-}
-
-interface PedidosTableProps {
-  pedidoData: PedidoItem[];
+interface PedidosTableContentProps {
+  dailyStats: DailyFaturamento[];
   isLoading: boolean;
+  onFetchDayOrders: (date: Date) => Promise<PedidoItem[]>;
 }
 
-export const PedidosTableContent: React.FC<PedidosTableProps> = ({ pedidoData, isLoading }) => {
-  const [expandedPedidoDates, setExpandedPedidoDates] = useState<Set<string>>(new Set());
-  const [expandedPedidos, setExpandedPedidos] = useState<Set<string>>(new Set());
+const groupOrders = (items: PedidoItem[], dateStr: string) => {
+  const grouped: any = {
+    DATA_PEDIDO: dateStr,
+    pedidos: []
+  };
 
-  // Agrupar pedidos por data e número de pedido
-  const groupedPedidoByDate: Record<string, GroupedPedido> = {};
-  
-  pedidoData.forEach(item => {
-    if (!item.DATA_PEDIDO || !item.PED_NUMPEDIDO) return;
-    
-    const dateStr = typeof item.DATA_PEDIDO === 'string' 
-      ? format(parseISO(item.DATA_PEDIDO), 'yyyy-MM-dd')
-      : format(item.DATA_PEDIDO, 'yyyy-MM-dd');
-    
-    if (!groupedPedidoByDate[dateStr]) {
-      groupedPedidoByDate[dateStr] = {
-        DATA_PEDIDO: item.DATA_PEDIDO,
-        pedidos: []
-      };
-    }
+  const orderMap: Record<string, any> = {};
 
-    // Criar key única para o pedido
-    const pedidoKey = `${item.PED_NUMPEDIDO}-${item.PED_ANOBASE}`;
-    
-    // Verificar se já temos esse pedido no grupo da data
-    const pedidoExistente = groupedPedidoByDate[dateStr].pedidos.find(
-      p => `${p.PED_NUMPEDIDO}-${p.PED_ANOBASE}` === pedidoKey
-    );
-    
-    if (pedidoExistente) {
-      pedidoExistente.TOTAL_QUANTIDADE += (item.QTDE_PEDIDA || 0);
-      pedidoExistente.TOTAL_VALOR += (item.QTDE_PEDIDA || 0) * (item.VALOR_UNITARIO || 0);
-      pedidoExistente.items.push(item);
-    } else {
-      groupedPedidoByDate[dateStr].pedidos.push({
+  items.forEach(item => {
+    if (!item.PED_NUMPEDIDO) return;
+
+    if (!orderMap[item.PED_NUMPEDIDO]) {
+      orderMap[item.PED_NUMPEDIDO] = {
         PED_NUMPEDIDO: item.PED_NUMPEDIDO,
-        PED_ANOBASE: item.PED_ANOBASE,
         DATA_PEDIDO: item.DATA_PEDIDO,
-        TOTAL_QUANTIDADE: item.QTDE_PEDIDA || 0,
-        TOTAL_VALOR: (item.QTDE_PEDIDA || 0) * (item.VALOR_UNITARIO || 0),
-        items: [item]
-      });
+        TOTAL_QUANTIDADE: 0,
+        TOTAL_VALOR: 0,
+        items: []
+      };
+      grouped.pedidos.push(orderMap[item.PED_NUMPEDIDO]);
     }
-  });
-  
-  // Converter para array e ordenar por data (mais recente primeiro)
-  const groupedPedidos = Object.values(groupedPedidoByDate).sort((a, b) => {
-    const dateA = new Date(a.DATA_PEDIDO).getTime();
-    const dateB = new Date(b.DATA_PEDIDO).getTime();
-    return dateB - dateA;
+
+    const group = orderMap[item.PED_NUMPEDIDO];
+    const qty = item.QTDE_PEDIDA || 0;
+    const valUnit = item.VALOR_UNITARIO || 0;
+
+    group.TOTAL_QUANTIDADE += qty;
+    group.TOTAL_VALOR += (qty * valUnit);
+    group.items.push(item);
   });
 
-  const togglePedidoDate = (dateStr: string) => {
-    setExpandedPedidoDates(prev => {
+  return grouped;
+};
+
+export const PedidosTable: React.FC<PedidosTableContentProps> = ({
+  dailyStats,
+  isLoading,
+  onFetchDayOrders
+}) => {
+  const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
+  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+
+  const [loadedData, setLoadedData] = useState<Record<string, PedidoItem[]>>({});
+  const [loadingDates, setLoadingDates] = useState<Set<string>>(new Set());
+
+  const toggleDate = async (dateStr: string) => {
+    const isExpanding = !expandedDates.has(dateStr);
+
+    setExpandedDates(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(dateStr)) {
-        newSet.delete(dateStr);
-      } else {
-        newSet.add(dateStr);
+      if (isExpanding) newSet.add(dateStr);
+      else newSet.delete(dateStr);
+      return newSet;
+    });
+
+    if (isExpanding && !loadedData[dateStr]) {
+      setLoadingDates(prev => new Set(prev).add(dateStr));
+      try {
+        const dateObj = parseISO(dateStr);
+        const orders = await onFetchDayOrders(dateObj);
+        setLoadedData(prev => ({ ...prev, [dateStr]: orders }));
+      } catch (e) {
+        console.error("Failed to load orders", e);
+      } finally {
+        setLoadingDates(prev => {
+          const n = new Set(prev);
+          n.delete(dateStr);
+          return n;
+        });
       }
+    }
+  };
+
+  const toggleOrder = (orderId: string) => {
+    setExpandedOrders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(orderId)) newSet.delete(orderId);
+      else newSet.add(orderId);
       return newSet;
     });
   };
 
-  const togglePedido = (pedidoKey: string) => {
-    setExpandedPedidos(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(pedidoKey)) {
-        newSet.delete(pedidoKey);
-      } else {
-        newSet.add(pedidoKey);
-      }
-      return newSet;
-    });
-  };
+  const stats = dailyStats || [];
 
-  if (groupedPedidos.length === 0) {
+  if (isLoading && stats.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        Nenhum pedido encontrado para o período selecionado
+      <div className="flex justify-center p-8">
+        <Loader2 className="animate-spin h-6 w-6 text-primary" />
       </div>
     );
+  }
+
+  if (stats.length === 0) {
+    return <div className="text-center p-8 text-muted-foreground">Nenhum pedido encontrado.</div>;
   }
 
   return (
@@ -113,25 +114,36 @@ export const PedidosTableContent: React.FC<PedidosTableProps> = ({ pedidoData, i
           <TableRow>
             <TableHead className="w-10"></TableHead>
             <TableHead>Data Pedido</TableHead>
-            <TableHead className="text-right">Total de Pedidos</TableHead>
+            <TableHead className="text-right">Pedidos</TableHead>
             <TableHead className="text-right">Valor Total</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {groupedPedidos.map((dateGroup) => {
-            const dateStr = typeof dateGroup.DATA_PEDIDO === 'string'
-              ? dateGroup.DATA_PEDIDO
-              : format(dateGroup.DATA_PEDIDO, 'yyyy-MM-dd');
-            
+          {stats.map((stat) => {
+            const dateStr = stat.date;
+
+            const orders = loadedData[dateStr] || [];
+            const isLoaded = !!loadedData[dateStr];
+            const isLoadingDetails = loadingDates.has(dateStr);
+
+            const dateGroup = isLoaded
+              ? groupOrders(orders, dateStr)
+              : { DATA_PEDIDO: dateStr, pedidos: [] };
+
             return (
-              <PedidoExpandableRow
+              <PedidosExpandableRow
                 key={dateStr}
                 dateStr={dateStr}
                 dateGroup={dateGroup}
-                expandedDates={expandedPedidoDates}
-                expandedPedidos={expandedPedidos}
-                togglePedidoDate={togglePedidoDate}
-                togglePedido={togglePedido}
+                expandedDates={expandedDates}
+                expandedOrders={expandedOrders}
+                toggleDate={toggleDate}
+                toggleOrder={toggleOrder}
+                stats={{
+                  totalCount: stat.pedidoCount || 0,
+                  totalValue: stat.pedidoTotal
+                }}
+                isLoading={isLoadingDetails}
               />
             );
           })}

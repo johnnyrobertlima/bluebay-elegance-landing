@@ -49,6 +49,7 @@
     --bluebay-light: 205 75% 92%;
     --bluebay-gold: 38 70% 50%;
     --bluebay-cream: 40 30% 96%;
+    --bluebay-beige-dark: 33 25% 45%;
 
     /* Gradients */
     --gradient-ocean: linear-gradient(135deg, hsl(210 85% 35%), hsl(205 75% 55%));

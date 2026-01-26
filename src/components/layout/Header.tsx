@@ -46,7 +46,10 @@ const Header = () => {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <span className="font-display text-2xl font-bold text-primary">
+            <span className={cn(
+              "font-display text-2xl font-bold transition-colors duration-300",
+              isScrolled ? "text-primary" : "text-white"
+            )}>
               BLUEBAY
             </span>
           </Link>
@@ -58,10 +61,10 @@ const Header = () => {
                 key={link.href}
                 to={link.href}
                 className={cn(
-                  "font-body text-sm font-medium tracking-wide transition-colors duration-200 hover:text-primary",
+                  "font-body text-sm font-medium tracking-wide transition-colors duration-200",
                   location.pathname === link.href
-                    ? "text-primary"
-                    : "text-foreground/80"
+                    ? (isScrolled ? "text-primary" : "text-white underline underline-offset-4")
+                    : (isScrolled ? "text-foreground/80 hover:text-primary" : "text-white/80 hover:text-white")
                 )}
               >
                 {link.label}
@@ -80,7 +83,12 @@ const Header = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => navigate('/client-area/bluebay_adm')}
-                      className="flex items-center gap-2 text-primary hover:text-primary hover:bg-primary/10"
+                      className={cn(
+                        "flex items-center gap-2 transition-colors",
+                        isScrolled
+                          ? "text-primary hover:text-primary hover:bg-primary/10"
+                          : "text-white hover:text-white hover:bg-white/10"
+                      )}
                     >
                       <Building2 className="h-4 w-4" />
                       Bluebay ADM
@@ -89,7 +97,12 @@ const Header = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => navigate('/admin')}
-                      className="flex items-center gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      className={cn(
+                        "flex items-center gap-2 transition-colors",
+                        isScrolled
+                          ? "text-destructive hover:text-destructive hover:bg-destructive/10"
+                          : "text-white/90 hover:text-white hover:bg-white/10"
+                      )}
                     >
                       <Shield className="h-4 w-4" />
                       Admin
@@ -100,16 +113,25 @@ const Header = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => navigate('/dashboard')}
-                  className="flex items-center gap-2 text-foreground/80 hover:text-primary"
+                  className={cn(
+                    "flex items-center gap-2 transition-colors",
+                    isScrolled
+                      ? "text-foreground/80 hover:text-primary"
+                      : "text-white/80 hover:text-white hover:bg-white/10"
+                  )}
                 >
                   <LayoutDashboard className="h-4 w-4" />
                   Minha Conta
                 </Button>
                 <Button
-                  variant="outline"
                   size="sm"
                   onClick={handleSignOut}
-                  className="flex items-center gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                  className={cn(
+                    "flex items-center gap-2 transition-all duration-300",
+                    isScrolled
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "bg-bluebay-beige-dark text-white hover:bg-bluebay-beige-dark/90 border-none shadow-lg"
+                  )}
                 >
                   <LogOut className="h-4 w-4" />
                   Sair
@@ -118,9 +140,13 @@ const Header = () => {
             ) : (
               <Link to="/auth">
                 <Button
-                  variant="outline"
                   size="sm"
-                  className="hidden sm:flex items-center gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+                  className={cn(
+                    "hidden sm:flex items-center gap-2 transition-all duration-300",
+                    isScrolled
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "bg-bluebay-beige-dark text-white hover:bg-bluebay-beige-dark/90 border-none shadow-lg"
+                  )}
                 >
                   <User className="h-4 w-4" />
                   Entrar
@@ -135,9 +161,9 @@ const Header = () => {
               aria-label="Toggle menu"
             >
               {isMobileMenuOpen ? (
-                <X className="h-6 w-6 text-foreground" />
+                <X className={cn("h-6 w-6 transition-colors", isScrolled || isMobileMenuOpen ? "text-foreground" : "text-white")} />
               ) : (
-                <Menu className="h-6 w-6 text-foreground" />
+                <Menu className={cn("h-6 w-6 transition-colors", isScrolled ? "text-foreground" : "text-white")} />
               )}
             </button>
           </div>
