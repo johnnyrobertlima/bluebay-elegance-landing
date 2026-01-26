@@ -298,21 +298,28 @@ const AdminUserManagement = () => {
         }
     };
 
-    const handleBulkToggleHide = async (hide: boolean) => {
+    const handleBulkToggleHide = async (hide: boolean, idsToProcess?: string[]) => {
         try {
-            if (selectedIds.size === 0) return;
+            const ids = idsToProcess || Array.from(selectedIds);
+            if (ids.length === 0) return;
+
             setIsBatchProcessing(true);
 
-            const { error } = await (supabase as any)
-                .from("profiles")
-                .update({ is_hidden: hide })
-                .in("id", Array.from(selectedIds));
+            // Chunking to avoid URL length limits (400 Bad Request)
+            const CHUNK_SIZE = 20;
+            for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+                const chunk = ids.slice(i, i + CHUNK_SIZE);
+                const { error } = await (supabase as any)
+                    .from("profiles")
+                    .update({ is_hidden: hide })
+                    .in("id", chunk);
 
-            if (error) throw error;
+                if (error) throw error;
+            }
 
             toast({
                 title: hide ? "Usuários ocultados" : "Usuários visíveis",
-                description: `${selectedIds.size} usuário(s) foram atualizados.`
+                description: `${ids.length} usuário(s) foram atualizados com sucesso.`
             });
             setSelectedIds(new Set());
             await loadData();
@@ -324,6 +331,13 @@ const AdminUserManagement = () => {
             });
         } finally {
             setIsBatchProcessing(false);
+        }
+    };
+
+    const handleHideAllVisible = (data: UserWithGroups[]) => {
+        const visibleIds = data.map(u => u.id);
+        if (visibleIds.length > 0) {
+            handleBulkToggleHide(true, visibleIds);
         }
     };
 
@@ -547,6 +561,35 @@ const AdminUserManagement = () => {
                                             {isBatchProcessing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Eye className="h-4 w-4 mr-2" />}
                                             Mostrar Selecionados
                                         </Button>
+                                    </div>
+                                )}
+
+                                {!showHidden && selectedIds.size === 0 && (
+                                    <div className="flex gap-2">
+                                        {activeUsers.length > 0 && (
+                                            <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={() => handleHideAllVisible(activeUsers)}
+                                                disabled={isBatchProcessing}
+                                                className="bg-red-600 hover:bg-red-700"
+                                            >
+                                                <EyeOff className="h-4 w-4 mr-2" />
+                                                Ocultar Todos Ativos ({activeUsers.length})
+                                            </Button>
+                                        )}
+                                        {inactiveUsers.length > 0 && (
+                                            <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={() => handleHideAllVisible(inactiveUsers)}
+                                                disabled={isBatchProcessing}
+                                                className="bg-red-600 hover:bg-red-700"
+                                            >
+                                                <EyeOff className="h-4 w-4 mr-2" />
+                                                Ocultar Todos Inativos ({inactiveUsers.length})
+                                            </Button>
+                                        )}
                                     </div>
                                 )}
                             </div>

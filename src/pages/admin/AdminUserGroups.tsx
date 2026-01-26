@@ -90,7 +90,7 @@ const AdminUserGroups = () => {
     try {
       setIsLoading(true);
       const { data: groupsData, error } = await (supabase as any)
-        .from("user_groups")
+        .from("bluebay_group")
         .select("*")
         .order("name");
 
@@ -100,7 +100,7 @@ const AdminUserGroups = () => {
       const groupsWithCounts = await Promise.all(
         ((groupsData || []) as UserGroup[]).map(async (group: UserGroup) => {
           const { count } = await (supabase as any)
-            .from("user_group_members")
+            .from("bluebay_group_member")
             .select("*", { count: "exact", head: true })
             .eq("group_id", group.id);
           return { ...group, member_count: count || 0 };
@@ -155,7 +155,7 @@ const AdminUserGroups = () => {
 
       if (selectedGroup) {
         const { error } = await (supabase as any)
-          .from("user_groups")
+          .from("bluebay_group")
           .update({
             name: formData.name,
             description: formData.description || null,
@@ -167,7 +167,7 @@ const AdminUserGroups = () => {
         if (error) throw error;
         toast({ title: "Grupo atualizado com sucesso!" });
       } else {
-        const { error } = await (supabase as any).from("user_groups").insert({
+        const { error } = await (supabase as any).from("bluebay_group").insert({
           name: formData.name,
           description: formData.description || null,
           redirect_after_login: formData.redirect_after_login,
@@ -194,7 +194,7 @@ const AdminUserGroups = () => {
   const handleDelete = async (groupId: string) => {
     try {
       const { error } = await (supabase as any)
-        .from("user_groups")
+        .from("bluebay_group")
         .delete()
         .eq("id", groupId);
 
@@ -214,7 +214,7 @@ const AdminUserGroups = () => {
     try {
       setIsTogglingHide(group.id);
       const { error } = await (supabase as any)
-        .from("user_groups")
+        .from("bluebay_group")
         .update({ is_hidden: !group.is_hidden })
         .eq("id", group.id);
 
@@ -236,21 +236,28 @@ const AdminUserGroups = () => {
     }
   };
 
-  const handleBulkToggleHide = async (hide: boolean) => {
+  const handleBulkToggleHide = async (hide: boolean, idsToProcess?: string[]) => {
     try {
-      if (selectedIds.size === 0) return;
+      const ids = idsToProcess || Array.from(selectedIds);
+      if (ids.length === 0) return;
+
       setIsBatchProcessing(true);
 
-      const { error } = await (supabase as any)
-        .from("user_groups")
-        .update({ is_hidden: hide })
-        .in("id", Array.from(selectedIds));
+      // Chunking to avoid URL length limits (400 Bad Request)
+      const CHUNK_SIZE = 20;
+      for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+        const chunk = ids.slice(i, i + CHUNK_SIZE);
+        const { error } = await (supabase as any)
+          .from("bluebay_group")
+          .update({ is_hidden: hide })
+          .in("id", chunk);
 
-      if (error) throw error;
+        if (error) throw error;
+      }
 
       toast({
         title: hide ? "Grupos ocultados" : "Grupos visíveis",
-        description: `${selectedIds.size} grupo(s) foram atualizados.`
+        description: `${ids.length} grupo(s) foram atualizados com sucesso.`
       });
       setSelectedIds(new Set());
       loadGroups();
@@ -262,6 +269,13 @@ const AdminUserGroups = () => {
       });
     } finally {
       setIsBatchProcessing(false);
+    }
+  };
+
+  const handleHideAllVisible = () => {
+    const visibleIds = filteredGroups.map(g => g.id);
+    if (visibleIds.length > 0) {
+      handleBulkToggleHide(true, visibleIds);
     }
   };
 
@@ -344,6 +358,19 @@ const AdminUserGroups = () => {
                   Mostrar Selecionados
                 </Button>
               </div>
+            )}
+
+            {!showHidden && filteredGroups.length > 0 && selectedIds.size === 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleHideAllVisible}
+                disabled={isBatchProcessing}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                <EyeOff className="h-4 w-4 mr-2" />
+                Ocultar Todos os Visíveis ({filteredGroups.length})
+              </Button>
             )}
           </div>
 
