@@ -35,8 +35,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Plus, Pencil, Trash2, Users, Settings, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Users, Settings, Loader2, Eye, EyeOff } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 interface UserGroup {
   id: string;
@@ -44,6 +45,7 @@ interface UserGroup {
   description: string | null;
   redirect_after_login: string;
   is_active: boolean;
+  is_hidden: boolean;
   created_at: string;
   member_count?: number;
 }
@@ -52,7 +54,7 @@ const AdminUserGroups = () => {
   const navigate = useNavigate();
   const { user, isAdmin, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  
+
   const [groups, setGroups] = useState<UserGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -64,6 +66,8 @@ const AdminUserGroups = () => {
     is_active: true,
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
+  const [isTogglingHide, setIsTogglingHide] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -203,6 +207,34 @@ const AdminUserGroups = () => {
     }
   };
 
+  const handleToggleHide = async (group: UserGroup) => {
+    try {
+      setIsTogglingHide(group.id);
+      const { error } = await (supabase as any)
+        .from("user_groups")
+        .update({ is_hidden: !group.is_hidden })
+        .eq("id", group.id);
+
+      if (error) throw error;
+
+      toast({
+        title: group.is_hidden ? "Grupo visível" : "Grupo ocultado",
+        description: group.is_hidden ? "O grupo agora aparece na lista padrão." : "O grupo foi movido para os itens ocultos."
+      });
+      loadGroups();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao alterar visibilidade",
+        description: error.message,
+      });
+    } finally {
+      setIsTogglingHide(null);
+    }
+  };
+
+  const filteredGroups = groups.filter(group => showHidden || !group.is_hidden);
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -226,7 +258,20 @@ const AdminUserGroups = () => {
           </div>
         </div>
 
-        <div className="flex justify-end mb-6">
+        <div className="flex justify-between items-center mb-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowHidden(!showHidden)}
+            className={cn(showHidden && "bg-muted")}
+          >
+            {showHidden ? (
+              <><Eye className="h-4 w-4 mr-2" /> Ocultar itens ocultos</>
+            ) : (
+              <><EyeOff className="h-4 w-4 mr-2" /> Visualizar ocultos</>
+            )}
+          </Button>
+
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => handleOpenDialog()}>
@@ -321,9 +366,9 @@ const AdminUserGroups = () => {
                   <Skeleton key={i} className="h-16 w-full" />
                 ))}
               </div>
-            ) : groups.length === 0 ? (
+            ) : filteredGroups.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
-                Nenhum grupo cadastrado
+                {showHidden ? "Nenhum grupo encontrado" : "Nenhum grupo visível"}
               </p>
             ) : (
               <Table>
@@ -338,9 +383,14 @@ const AdminUserGroups = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {groups.map((group) => (
-                    <TableRow key={group.id}>
-                      <TableCell className="font-medium">{group.name}</TableCell>
+                  {filteredGroups.map((group) => (
+                    <TableRow key={group.id} className={cn(group.is_hidden && "opacity-60 bg-muted/30")}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {group.name}
+                          {group.is_hidden && <EyeOff className="h-3 w-3 text-muted-foreground" />}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         {group.description || "-"}
                       </TableCell>
@@ -352,11 +402,10 @@ const AdminUserGroups = () => {
                       </TableCell>
                       <TableCell className="text-center">
                         <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            group.is_active
-                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                          }`}
+                          className={`px-2 py-1 rounded-full text-xs ${group.is_active
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                            }`}
                         >
                           {group.is_active ? "Ativo" : "Inativo"}
                         </span>
@@ -366,8 +415,23 @@ const AdminUserGroups = () => {
                           <Button
                             variant="ghost"
                             size="icon"
+                            onClick={() => handleToggleHide(group)}
+                            disabled={isTogglingHide === group.id}
+                            title={group.is_hidden ? "Mostrar na lista" : "Ocultar da lista"}
+                          >
+                            {isTogglingHide === group.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : group.is_hidden ? (
+                              <Eye className="h-4 w-4" />
+                            ) : (
+                              <EyeOff className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() =>
-                              navigate(`/admin/groups/${group.id}/menus`)
+                              navigate(`/admin/user-groups/${group.id}/menus`)
                             }
                             title="Configurar Menus"
                           >
@@ -398,7 +462,7 @@ const AdminUserGroups = () => {
                                   Excluir grupo?
                                 </AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Isso removerá permanentemente o grupo "{group.name}" 
+                                  Isso removerá permanentemente o grupo "{group.name}"
                                   e todas as associações de usuários.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
