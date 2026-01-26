@@ -22,6 +22,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, ArrowLeft, Users, UserX, UserCheck, Ban, Trash2, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +54,8 @@ const AdminUserManagement = () => {
     const [isProcessing, setIsProcessing] = useState<string | null>(null);
     const [showHidden, setShowHidden] = useState(false);
     const [isTogglingHide, setIsTogglingHide] = useState<string | null>(null);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [isBatchProcessing, setIsBatchProcessing] = useState(false);
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -295,6 +298,53 @@ const AdminUserManagement = () => {
         }
     };
 
+    const handleBulkToggleHide = async (hide: boolean) => {
+        try {
+            if (selectedIds.size === 0) return;
+            setIsBatchProcessing(true);
+
+            const { error } = await (supabase as any)
+                .from("profiles")
+                .update({ is_hidden: hide })
+                .in("id", Array.from(selectedIds));
+
+            if (error) throw error;
+
+            toast({
+                title: hide ? "Usuários ocultados" : "Usuários visíveis",
+                description: `${selectedIds.size} usuário(s) foram atualizados.`
+            });
+            setSelectedIds(new Set());
+            await loadData();
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Erro na operação em lote",
+                description: error.message,
+            });
+        } finally {
+            setIsBatchProcessing(false);
+        }
+    };
+
+    const handleSelectAll = (data: UserWithGroups[], checked: boolean) => {
+        if (checked) {
+            setSelectedIds(new Set(data.map(u => u.id)));
+        } else {
+            setSelectedIds(new Set());
+        }
+    };
+
+    const toggleSelect = (id: string) => {
+        const newSelected = new Set(selectedIds);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        setSelectedIds(newSelected);
+    };
+
     // Cleanup on unmount
     useEffect(() => {
         return () => {
@@ -312,6 +362,12 @@ const AdminUserManagement = () => {
         <Table>
             <TableHeader>
                 <TableRow>
+                    <TableHead className="w-[40px]">
+                        <Checkbox
+                            checked={data.length > 0 && selectedIds.size === data.length}
+                            onCheckedChange={(checked) => handleSelectAll(data, !!checked)}
+                        />
+                    </TableHead>
                     <TableHead>Nome / E-mail</TableHead>
                     <TableHead>Grupos Atuais</TableHead>
                     <TableHead>Adicionar Grupo</TableHead>
@@ -328,6 +384,12 @@ const AdminUserManagement = () => {
                 ) : (
                     data.map((user) => (
                         <TableRow key={user.id} className={cn(user.is_hidden && "opacity-60 bg-muted/30")}>
+                            <TableCell>
+                                <Checkbox
+                                    checked={selectedIds.has(user.id)}
+                                    onCheckedChange={() => toggleSelect(user.id)}
+                                />
+                            </TableCell>
                             <TableCell>
                                 <div className="flex items-center gap-2">
                                     <div className="flex flex-col">
@@ -445,24 +507,49 @@ const AdminUserManagement = () => {
                 <Card>
                     <CardHeader>
                         <div className="flex justify-between items-center">
-                            <div>
-                                <CardTitle>Usuários do Sistema</CardTitle>
-                                <CardDescription>
-                                    Gerencie quem tem acesso ao sistema
-                                </CardDescription>
-                            </div>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setShowHidden(!showHidden)}
-                                className={cn(showHidden && "bg-muted")}
-                            >
-                                {showHidden ? (
-                                    <><Eye className="h-4 w-4 mr-2" /> Ocultar itens ocultos</>
-                                ) : (
-                                    <><EyeOff className="h-4 w-4 mr-2" /> Visualizar ocultos</>
+                            <div className="flex gap-4 items-center">
+                                <div>
+                                    <CardTitle>Usuários do Sistema</CardTitle>
+                                    <CardDescription>
+                                        Gerencie quem tem acesso ao sistema
+                                    </CardDescription>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowHidden(!showHidden)}
+                                    className={cn(showHidden && "bg-muted")}
+                                >
+                                    {showHidden ? (
+                                        <><Eye className="h-4 w-4 mr-2" /> Ocultar itens ocultos</>
+                                    ) : (
+                                        <><EyeOff className="h-4 w-4 mr-2" /> Visualizar ocultos</>
+                                    )}
+                                </Button>
+
+                                {selectedIds.size > 0 && (
+                                    <div className="flex gap-2 animate-fade-in">
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            onClick={() => handleBulkToggleHide(true)}
+                                            disabled={isBatchProcessing}
+                                        >
+                                            {isBatchProcessing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <EyeOff className="h-4 w-4 mr-2" />}
+                                            Ocultar Selecionados ({selectedIds.size})
+                                        </Button>
+                                        <Button
+                                            variant="secondary"
+                                            size="sm"
+                                            onClick={() => handleBulkToggleHide(false)}
+                                            disabled={isBatchProcessing}
+                                        >
+                                            {isBatchProcessing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Eye className="h-4 w-4 mr-2" />}
+                                            Mostrar Selecionados
+                                        </Button>
+                                    </div>
                                 )}
-                            </Button>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>

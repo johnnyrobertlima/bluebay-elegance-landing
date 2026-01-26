@@ -24,6 +24,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -68,6 +69,8 @@ const AdminUserGroups = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [isTogglingHide, setIsTogglingHide] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -233,6 +236,53 @@ const AdminUserGroups = () => {
     }
   };
 
+  const handleBulkToggleHide = async (hide: boolean) => {
+    try {
+      if (selectedIds.size === 0) return;
+      setIsBatchProcessing(true);
+
+      const { error } = await (supabase as any)
+        .from("user_groups")
+        .update({ is_hidden: hide })
+        .in("id", Array.from(selectedIds));
+
+      if (error) throw error;
+
+      toast({
+        title: hide ? "Grupos ocultados" : "Grupos visíveis",
+        description: `${selectedIds.size} grupo(s) foram atualizados.`
+      });
+      setSelectedIds(new Set());
+      loadGroups();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro na operação em lote",
+        description: error.message,
+      });
+    } finally {
+      setIsBatchProcessing(false);
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(filteredGroups.map(g => g.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
   const filteredGroups = groups.filter(group => showHidden || !group.is_hidden);
 
   if (authLoading) {
@@ -259,18 +309,43 @@ const AdminUserGroups = () => {
         </div>
 
         <div className="flex justify-between items-center mb-6">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowHidden(!showHidden)}
-            className={cn(showHidden && "bg-muted")}
-          >
-            {showHidden ? (
-              <><Eye className="h-4 w-4 mr-2" /> Ocultar itens ocultos</>
-            ) : (
-              <><EyeOff className="h-4 w-4 mr-2" /> Visualizar ocultos</>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowHidden(!showHidden)}
+              className={cn(showHidden && "bg-muted")}
+            >
+              {showHidden ? (
+                <><Eye className="h-4 w-4 mr-2" /> Ocultar itens ocultos</>
+              ) : (
+                <><EyeOff className="h-4 w-4 mr-2" /> Visualizar ocultos</>
+              )}
+            </Button>
+
+            {selectedIds.size > 0 && (
+              <div className="flex gap-2 animate-fade-in">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleBulkToggleHide(true)}
+                  disabled={isBatchProcessing}
+                >
+                  {isBatchProcessing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <EyeOff className="h-4 w-4 mr-2" />}
+                  Ocultar Selecionados ({selectedIds.size})
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleBulkToggleHide(false)}
+                  disabled={isBatchProcessing}
+                >
+                  {isBatchProcessing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Eye className="h-4 w-4 mr-2" />}
+                  Mostrar Selecionados
+                </Button>
+              </div>
             )}
-          </Button>
+          </div>
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
@@ -374,6 +449,12 @@ const AdminUserGroups = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[40px]">
+                      <Checkbox
+                        checked={filteredGroups.length > 0 && selectedIds.size === filteredGroups.length}
+                        onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                      />
+                    </TableHead>
                     <TableHead>Nome</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Redirect</TableHead>
@@ -385,6 +466,12 @@ const AdminUserGroups = () => {
                 <TableBody>
                   {filteredGroups.map((group) => (
                     <TableRow key={group.id} className={cn(group.is_hidden && "opacity-60 bg-muted/30")}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(group.id)}
+                          onCheckedChange={() => toggleSelect(group.id)}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           {group.name}
