@@ -89,6 +89,8 @@ export const BluebayAdmMenu = () => {
       name: "Configurações",
       icon: <Settings className="h-4 w-4 mr-2" />,
       children: [
+        { name: "Gestão de Usuários", path: "/admin/users", icon: <Users className="h-4 w-4 mr-2" /> },
+        { name: "Grupos de Usuários", path: "/admin/user-groups", icon: <Group className="h-4 w-4 mr-2" /> },
         { name: "Gestão de Relatório", path: "/client-area/bluebay_adm/gestao-relatorios", icon: <FileSpreadsheet className="h-4 w-4 mr-2" /> },
         { name: "Página Inicial", path: "/client-area/bluebay_adm/landing-page", icon: <LayoutDashboard className="h-4 w-4 mr-2" /> },
       ]
