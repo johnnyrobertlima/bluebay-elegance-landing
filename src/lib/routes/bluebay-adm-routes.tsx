@@ -18,6 +18,9 @@ import {
 } from "@/pages/bluebay_adm";
 import BluebayAdmStockSalesAnalytics from "@/pages/bluebay_adm/BluebayAdmStockSalesAnalytics";
 import BluebayAdmItemManagement from "@/pages/bluebay_adm/BluebayAdmItemManagement";
+import GestaoRelatorios from "@/pages/bluebay_adm/GestaoRelatorios";
+import BluebayAdmSeasonPerformance from "@/pages/bluebay_adm/BluebayAdmSeasonPerformance";
+import BluebayAdmWalletManagement from "@/pages/bluebay_adm/BluebayAdmWalletManagement";
 
 export const bluebayAdmRoutes = (
   <>
@@ -34,6 +37,11 @@ export const bluebayAdmRoutes = (
     <Route path="/client-area/bluebay_adm/stock-sales-analytics" element={
       <PermissionGuard resourcePath="/client-area/bluebay_adm/reports">
         <BluebayAdmStockSalesAnalytics />
+      </PermissionGuard>
+    } />
+    <Route path="/client-area/bluebay_adm/gestao-relatorios" element={
+      <PermissionGuard resourcePath="/client-area/bluebay_adm/gestao-relatorios">
+        <GestaoRelatorios />
       </PermissionGuard>
     } />
     <Route path="/client-area/bluebay_adm/dashboard" element={
@@ -99,6 +107,16 @@ export const bluebayAdmRoutes = (
     <Route path="/client-area/bluebay_adm/landing-page" element={
       <PermissionGuard resourcePath="/client-area/bluebay_adm/dashboard">
         <BluebayAdmLandingPage />
+      </PermissionGuard>
+    } />
+    <Route path="/client-area/bluebay_adm/season-performance" element={
+      <PermissionGuard resourcePath="/client-area/bluebay_adm/reports">
+        <BluebayAdmSeasonPerformance />
+      </PermissionGuard>
+    } />
+    <Route path="/client-area/bluebay_adm/wallet-management" element={
+      <PermissionGuard resourcePath="/client-area/bluebay_adm/reports">
+        <BluebayAdmWalletManagement />
       </PermissionGuard>
     } />
   </>
