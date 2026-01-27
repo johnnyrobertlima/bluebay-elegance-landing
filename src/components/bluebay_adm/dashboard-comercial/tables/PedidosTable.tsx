@@ -119,34 +119,41 @@ export const PedidosTable: React.FC<PedidosTableContentProps> = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {stats.map((stat) => {
-            const dateStr = stat.date;
+          {(stats || [])
+            .filter(stat => {
+              const val = Number(stat.pedidoTotal || 0);
+              const count = Number(stat.pedidoCount || 0);
+              return val > 0 || count > 0;
+            })
+            .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+            .map((stat) => {
+              const dateStr = stat.date;
 
-            const orders = loadedData[dateStr] || [];
-            const isLoaded = !!loadedData[dateStr];
-            const isLoadingDetails = loadingDates.has(dateStr);
+              const orders = loadedData[dateStr] || [];
+              const isLoaded = !!loadedData[dateStr];
+              const isLoadingDetails = loadingDates.has(dateStr);
 
-            const dateGroup = isLoaded
-              ? groupOrders(orders, dateStr)
-              : { DATA_PEDIDO: dateStr, pedidos: [] };
+              const dateGroup = isLoaded
+                ? groupOrders(orders, dateStr)
+                : { DATA_PEDIDO: dateStr, pedidos: [] };
 
-            return (
-              <PedidosExpandableRow
-                key={dateStr}
-                dateStr={dateStr}
-                dateGroup={dateGroup}
-                expandedDates={expandedDates}
-                expandedOrders={expandedOrders}
-                toggleDate={toggleDate}
-                toggleOrder={toggleOrder}
-                stats={{
-                  totalCount: stat.pedidoCount || 0,
-                  totalValue: stat.pedidoTotal
-                }}
-                isLoading={isLoadingDetails}
-              />
-            );
-          })}
+              return (
+                <PedidosExpandableRow
+                  key={dateStr}
+                  dateStr={dateStr}
+                  dateGroup={dateGroup}
+                  expandedDates={expandedDates}
+                  expandedOrders={expandedOrders}
+                  toggleDate={toggleDate}
+                  toggleOrder={toggleOrder}
+                  stats={{
+                    totalCount: Number(stat.pedidoCount || 0),
+                    totalValue: Number(stat.pedidoTotal || 0)
+                  }}
+                  isLoading={isLoadingDetails}
+                />
+              );
+            })}
         </TableBody>
       </Table>
     </div>

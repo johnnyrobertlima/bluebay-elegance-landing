@@ -64,6 +64,7 @@ export interface FaturamentoItem {
     PES_CODIGO?: number;
     TIPO?: string;
   };
+  REPRESENTANTE_NOME?: string; // Fetched separately (Apelido do Representante)
 }
 
 export interface PedidoItem {

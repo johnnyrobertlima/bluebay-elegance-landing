@@ -1,4 +1,4 @@
-
+import React, { useState } from "react";
 import { FaturamentoKpiCards } from "./FaturamentoKpiCards";
 import { FaturamentoTimeSeriesChart } from "./FaturamentoTimeSeriesChart";
 import { CentroCustoIndicators } from "./CentroCustoIndicators";
@@ -178,7 +178,8 @@ export const DashboardContent = ({
   const hasNaoIdentificados = !!naoIdentificadosStats && (naoIdentificadosStats.totalFaturado > 0 || naoIdentificadosStats.totalPedidos > 0);
 
 
-
+  // State for active tab, defaulting to "none" as requested to not load any grid initially
+  const [activeTab, setActiveTab] = useState<string>("none");
 
   return (
     <>
@@ -206,7 +207,6 @@ export const DashboardContent = ({
           startDate={startDate}
           endDate={endDate}
           isLoading={isLoading}
-          onDateSelect={onDateSelect}
         />
       </div>
 
@@ -250,7 +250,7 @@ export const DashboardContent = ({
 
       {/* Tabela de Notas Fiscais e Pedidos (filtrada pelo Centro de Custo selecionado) */}
       {/* Tabela de Notas Fiscais e Pedidos (filtrada pelo Centro de Custo selecionado) */}
-      <Tabs defaultValue="faturamento" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="faturamento">Notas Fiscais Emitidas</TabsTrigger>
           <TabsTrigger value="pedidos">Pedidos</TabsTrigger>
@@ -258,54 +258,66 @@ export const DashboardContent = ({
           <TabsTrigger value="clientes">Clientes</TabsTrigger> {/* New Tab */}
         </TabsList>
 
+        {activeTab === "none" && (
+          <Alert className="bg-muted/30 border-dashed">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Selecione uma visualização</AlertTitle>
+            <AlertDescription>
+              Escolha entre Notas Fiscais, Pedidos, Produtos ou Clientes acima para visualizar o detalhamento dos dados.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <TabsContent value="faturamento">
-          <FaturamentoTable
-            dailyStats={dailyData}
-            monthlyStats={[]}
-            startDate={startDate}
-            endDate={endDate}
-            onFetchDayDetails={onFetchDayDetails}
-            onDateSelect={onDateSelect}
-            isLoading={isLoading}
-          />
+          {activeTab === "faturamento" && (
+            <FaturamentoTable
+              dailyStats={dailyData}
+              monthlyStats={[]}
+              startDate={startDate}
+              endDate={endDate}
+              onFetchDayDetails={onFetchDayDetails}
+              onDateSelect={onDateSelect}
+              isLoading={isLoading}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="pedidos">
-          <div className="rounded-md border p-6 bg-card text-card-foreground shadow-sm">
-            <h3 className="text-lg font-semibold mb-4">Detalhamento de Pedidos</h3>
-            <p className="text-muted-foreground mb-4">
-              Visualize os pedidos por dia. Clique em um dia para expandir e ver os pedidos individuais.
-            </p>
-            <div className="rounded-md border text-left">
-              <PedidosTable
-                dailyStats={dailyData}
-                onFetchDayOrders={onFetchDayOrders}
-                isLoading={isLoading}
-              />
+          {activeTab === "pedidos" && (
+            <div className="rounded-md border p-6 bg-card text-card-foreground shadow-sm">
+              <h3 className="text-lg font-semibold mb-4">Detalhamento de Pedidos</h3>
+              <p className="text-muted-foreground mb-4">
+                Visualize os pedidos por dia. Clique em um dia para expandir e ver os pedidos individuais.
+              </p>
+              <div className="rounded-md border text-left">
+                <PedidosTable
+                  dailyStats={dailyData}
+                  onFetchDayOrders={onFetchDayOrders}
+                  isLoading={isLoading}
+                />
+              </div>
             </div>
-          </div>
+          )}
         </TabsContent>
 
         <TabsContent value="produtos">
-          {/* Replaced ProductsTable with ProductsGrid for consistency if available, otherwise keep ProductsTable. 
-               Wait, existing code uses ProductsTable. The prompt asked for "Grid de produtos". 
-               I'll assume ProductsTable is what the user refers to, or I should stick to it.
-               The user said "Baseado na Grid de produtos...". I will keep existing ProductsTable here.
-               But I need to add ClientsGrid.
-           */}
-          <ProductsTable
-            startDate={startDate}
-            endDate={endDate}
-            selectedCentroCusto={selectedCentroCusto}
-            selectedRepresentative={selectedRepresentative}
-          />
+          {activeTab === "produtos" && (
+            <ProductsTable
+              startDate={startDate}
+              endDate={endDate}
+              selectedCentroCusto={selectedCentroCusto}
+              selectedRepresentative={selectedRepresentative}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="clientes">
-          <ClientsGrid
-            data={clientStats || []}
-            isLoading={isClientLoading || false}
-          />
+          {activeTab === "clientes" && (
+            <ClientsGrid
+              data={clientStats || []}
+              isLoading={isClientLoading || false}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </>

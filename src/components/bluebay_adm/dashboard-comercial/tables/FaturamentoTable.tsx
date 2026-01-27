@@ -39,6 +39,8 @@ const groupItemsByNote = (items: FaturamentoItem[], dateStr: string) => {
       notasMap[item.NOTA] = {
         NOTA: item.NOTA,
         DATA_EMISSAO: item.DATA_EMISSAO,
+        CLIENT_NAME: item.APELIDO,
+        REP_NAME: item.REPRESENTANTE_NOME,
         TOTAL_QUANTIDADE: 0,
         TOTAL_VALOR: 0,
         items: []
@@ -145,8 +147,14 @@ export const FaturamentoTableContent: React.FC<FaturamentoTableContentProps> = (
     );
   }
 
-  // Filter stats that have invoice data
-  const invoiceStats = dailyStats.filter(stat => (stat.total > 0 || (stat.faturamentoCount || 0) > 0));
+  // Filter and sort stats to show most recent days with actual data first
+  const invoiceStats = (dailyStats || [])
+    .filter(stat => {
+      const val = Number(stat.total || 0);
+      const count = Number(stat.faturamentoCount || 0);
+      return val > 0 || count > 0;
+    })
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
   if (invoiceStats.length === 0) {
     return <div className="text-center py-8 text-muted-foreground">Nenhuma nota fiscal encontrada.</div>;
@@ -185,8 +193,8 @@ export const FaturamentoTableContent: React.FC<FaturamentoTableContentProps> = (
                 toggleDate={toggleDate}
                 toggleNote={toggleNote}
                 stats={{
-                  totalCount: stat.faturamentoCount || 0,
-                  totalValue: stat.total
+                  totalCount: Number(stat.faturamentoCount || 0),
+                  totalValue: Number(stat.total || 0)
                 }}
                 isLoading={isLoadingDetails}
               />

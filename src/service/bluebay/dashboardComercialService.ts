@@ -46,7 +46,7 @@ export const fetchDashboardStats = async (
       faturamentoCount: Number(row.faturamentoCount || row.faturamento_count) || 0,
       pedidoCount: Number(row.pedidoCount || row.pedido_count) || 0
     })).sort((a: any, b: any) =>
-      new Date(a.date).getTime() - new Date(b.date).getTime()
+      (b.date || "").localeCompare(a.date || "")
     );
 
     const { totals, costCenters, monthly, representatives } = rawStats;
@@ -430,6 +430,43 @@ export const fetchDailyDetails = async (
       }
     }
 
+    // Fetch Representative Names
+    let repMap = new Map<string, string>();
+    const repIds = data?.map((d: any) => d.representante).filter((c: any) => c && String(c) !== '0') || [];
+
+    if (repIds.length > 0) {
+      const uniqueRepIds = [...new Set(repIds)];
+      const { data: repData } = await supabase
+        .from('BLUEBAY_PESSOA')
+        .select('PES_CODIGO, APELIDO')
+        .in('PES_CODIGO', uniqueRepIds);
+
+      if (repData) {
+        repData.forEach((r: any) => {
+          if (r.PES_CODIGO) repMap.set(String(r.PES_CODIGO), r.APELIDO);
+        });
+      }
+    }
+
+    // Fetch Client Names (Fix for missing names in MV)
+    let clientMap = new Map<string, string>();
+    const clientIds = data?.map((d: any) => d.pes_codigo).filter((c: any) => c && String(c) !== '0') || [];
+
+    if (clientIds.length > 0) {
+      const uniqueClientIds = [...new Set(clientIds)];
+      const { data: clientData } = await supabase
+        .from('BLUEBAY_PESSOA')
+        .select('PES_CODIGO, APELIDO, RAZAOSOCIAL')
+        .in('PES_CODIGO', uniqueClientIds);
+
+      if (clientData) {
+        clientData.forEach((c: any) => {
+          const name = c.APELIDO && c.APELIDO.trim() !== '' ? c.APELIDO : c.RAZAOSOCIAL;
+          if (c.PES_CODIGO) clientMap.set(String(c.PES_CODIGO), name);
+        });
+      }
+    }
+
     // Map to interface
     return (data || []).map((item: any) => ({
       MATRIZ: item.matriz,
@@ -447,8 +484,10 @@ export const fetchDailyDetails = async (
       CENTROCUSTO: item.centrocusto,
       VALOR_UNITARIO: item.valor_unitario,
       RAZAOSOCIAL: item.razao_social,
-      APELIDO: item.apelido,
-      DESCRICAO: itemMap.get(item.item_codigo) || ''
+      APELIDO: clientMap.get(String(item.pes_codigo)) || item.apelido || item.razao_social || '',
+      DESCRICAO: itemMap.get(item.item_codigo) || '',
+      REPRESENTANTE: item.representante ? parseInt(item.representante) : null,
+      REPRESENTANTE_NOME: repMap.get(String(item.representante)) || ''
     }));
   } catch (error) {
     console.error(`[SERVICE] Erro ao buscar dia ${date}:`, error);
@@ -1124,7 +1163,7 @@ export const fetchDashboardStatsByCity = async (
       date: date,
       formattedDate: format(parseISO(date), 'dd/MM/yyyy'),
       ...stats
-    })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    })).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
     // Formatting Cost Centers
     const costCenterStats = Array.from(ccMap.values()).map(cc => ({

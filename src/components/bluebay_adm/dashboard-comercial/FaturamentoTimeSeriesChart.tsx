@@ -70,23 +70,27 @@ export const FaturamentoTimeSeriesChart = ({
   const chartData = useMemo(() => {
     // Determinar se deve usar dados diários ou mensais
     const monthsDiff = differenceInMonths(endDate, startDate);
-    
+
     // Se o período for maior que 2 meses, usa dados mensais
     if (monthsDiff > 2) {
-      return monthlyData.map(item => ({
-        label: item.month,
-        value: item.total,
-        pedidoValue: item.pedidoTotal,
-        formattedLabel: item.formattedMonth
-      }));
+      return [...monthlyData]
+        .sort((a, b) => a.month.localeCompare(b.month))
+        .map(item => ({
+          label: item.month,
+          value: item.total,
+          pedidoValue: item.pedidoTotal,
+          formattedLabel: item.formattedMonth
+        }));
     } else {
       // Caso contrário, usa dados diários
-      return dailyData.map(item => ({
-        label: item.date,
-        value: item.total,
-        pedidoValue: item.pedidoTotal,
-        formattedLabel: item.formattedDate
-      }));
+      return [...dailyData]
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map(item => ({
+          label: item.date,
+          value: item.total,
+          pedidoValue: item.pedidoTotal,
+          formattedLabel: item.formattedDate
+        }));
     }
   }, [dailyData, monthlyData, startDate, endDate]);
 
