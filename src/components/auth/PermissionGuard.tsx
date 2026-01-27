@@ -14,9 +14,10 @@ export interface PermissionGuardProps {
 export const PermissionGuard: React.FC<PermissionGuardProps> = ({
   children,
   requiredRole,
+  resourcePath,
   fallbackPath = "/auth",
 }) => {
-  const { user, loading, userRoles, isAdmin } = useAuth();
+  const { user, loading, userRoles, isAdmin, allowedPaths } = useAuth();
 
   if (loading) {
     return (
@@ -26,24 +27,35 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
     );
   }
 
+  // 1. Check if user is authenticated
   if (!user) {
     return <Navigate to={fallbackPath} replace />;
   }
 
-  // If a specific role is required, check for it
-  if (requiredRole) {
-    // Admins always have access
-    if (isAdmin) {
-      return <>{children}</>;
-    }
-    
-    // Check if user has the required role
-    if (!userRoles.includes(requiredRole)) {
-      return <Navigate to="/" replace />;
-    }
+  // 2. Identify resource to check
+  // If no specific resourcePath, we allow access (usually for shared layouts)
+  if (!resourcePath) {
+    return <>{children}</>;
   }
 
-  // For authenticated users with any role, or if no specific role required
+  // 3. Admin bypass
+  if (isAdmin) {
+    return <>{children}</>;
+  }
+
+  // 4. Dynamic Path Check
+  // We check if the resourcePath (or any of its parents) is in the allowed list
+  // or if the resourcePath itself is explicitly allowed.
+  const isAllowed = allowedPaths.some(path =>
+    resourcePath === path || resourcePath.startsWith(path + "/")
+  );
+
+  if (!isAllowed) {
+    console.warn(`[PermissionGuard] Access denied to ${resourcePath}`);
+    return <Navigate to="/" replace />;
+  }
+
+  // Access Granted
   return <>{children}</>;
 };
 

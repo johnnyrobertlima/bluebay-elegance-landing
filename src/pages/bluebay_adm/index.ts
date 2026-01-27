@@ -17,6 +17,8 @@ import BluebayAdmStockSalesAnalytics from './BluebayAdmStockSalesAnalytics';
 import GestaoRelatorios from './GestaoRelatorios';
 import BluebayAdmSeasonPerformance from './BluebayAdmSeasonPerformance';
 import BluebayAdmWalletManagement from './BluebayAdmWalletManagement';
+import BluebayAdmGestaoPaginas from './BluebayAdmGestaoPaginas';
+import BluebayAdmGestaoCentroCusto from './BluebayAdmGestaoCentroCusto';
 
 export {
   BluebayAdmReports,
@@ -36,5 +38,7 @@ export {
   BluebayAdmStockSalesAnalytics,
   GestaoRelatorios,
   BluebayAdmSeasonPerformance,
-  BluebayAdmWalletManagement
+  BluebayAdmWalletManagement,
+  BluebayAdmGestaoPaginas,
+  BluebayAdmGestaoCentroCusto
 };

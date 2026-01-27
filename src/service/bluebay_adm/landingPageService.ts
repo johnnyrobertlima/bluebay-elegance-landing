@@ -71,12 +71,18 @@ export interface InstagramConfigData {
 // 1. Hero Section
 export const fetchHeroData = async (): Promise<HeroSectionData | null> => {
     try {
-        const { data, error } = await (supabase
+        const fetchPromise = supabase
             .from('landing_hero' as any)
             .select('*')
             .order('created_at', { ascending: false })
             .limit(1)
-            .maybeSingle() as any);
+            .maybeSingle();
+
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Hero data timeout")), 5000)
+        );
+
+        const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
         if (error) {
             console.error('Error fetching hero data:', error);
@@ -100,12 +106,19 @@ export const updateHeroData = async (data: HeroSectionData): Promise<void> => {
 // 2. Collection Section
 export const fetchCollectionConfig = async (): Promise<CollectionConfigData | null> => {
     try {
-        const { data, error } = await (supabase
+        const fetchPromise = supabase
             .from('landing_collection_config' as any)
             .select('*')
             .order('created_at', { ascending: false })
             .limit(1)
-            .maybeSingle() as any);
+            .maybeSingle();
+
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Collection config timeout")), 5000)
+        );
+
+        const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+
         if (error) return null;
         return data;
     } catch (error) { return null; }

@@ -14,10 +14,12 @@ import {
   BluebayAdmDashboardComercial,
   BluebayAdmItemGrupoManagement,
   BluebayAdmEtiquetas,
-  BluebayAdmLandingPage
+  BluebayAdmLandingPage,
+  BluebayAdmGestaoPaginas,
+  BluebayAdmItemManagement,
+  BluebayAdmGestaoCentroCusto
 } from "@/pages/bluebay_adm";
 import BluebayAdmStockSalesAnalytics from "@/pages/bluebay_adm/BluebayAdmStockSalesAnalytics";
-import BluebayAdmItemManagement from "@/pages/bluebay_adm/BluebayAdmItemManagement";
 import GestaoRelatorios from "@/pages/bluebay_adm/GestaoRelatorios";
 import BluebayAdmSeasonPerformance from "@/pages/bluebay_adm/BluebayAdmSeasonPerformance";
 import BluebayAdmWalletManagement from "@/pages/bluebay_adm/BluebayAdmWalletManagement";
@@ -35,7 +37,7 @@ export const bluebayAdmRoutes = (
       </PermissionGuard>
     } />
     <Route path="/client-area/bluebay_adm/stock-sales-analytics" element={
-      <PermissionGuard resourcePath="/client-area/bluebay_adm/reports">
+      <PermissionGuard resourcePath="/client-area/bluebay_adm/stock-sales-analytics">
         <BluebayAdmStockSalesAnalytics />
       </PermissionGuard>
     } />
@@ -50,7 +52,7 @@ export const bluebayAdmRoutes = (
       </PermissionGuard>
     } />
     <Route path="/client-area/bluebay_adm/dashboard_comercial" element={
-      <PermissionGuard resourcePath="/client-area/bluebay_adm/dashboard">
+      <PermissionGuard resourcePath="/client-area/bluebay_adm/dashboard_comercial">
         <BluebayAdmDashboardComercial />
       </PermissionGuard>
     } />
@@ -85,7 +87,7 @@ export const bluebayAdmRoutes = (
       </PermissionGuard>
     } />
     <Route path="/client-area/bluebay_adm/item-grupo-management" element={
-      <PermissionGuard resourcePath="/client-area/bluebay_adm/item-management">
+      <PermissionGuard resourcePath="/client-area/bluebay_adm/item-grupo-management">
         <BluebayAdmItemGrupoManagement />
       </PermissionGuard>
     } />
@@ -105,18 +107,28 @@ export const bluebayAdmRoutes = (
       </PermissionGuard>
     } />
     <Route path="/client-area/bluebay_adm/landing-page" element={
-      <PermissionGuard resourcePath="/client-area/bluebay_adm/dashboard">
+      <PermissionGuard resourcePath="/client-area/bluebay_adm/landing-page">
         <BluebayAdmLandingPage />
       </PermissionGuard>
     } />
     <Route path="/client-area/bluebay_adm/season-performance" element={
-      <PermissionGuard resourcePath="/client-area/bluebay_adm/reports">
+      <PermissionGuard resourcePath="/client-area/bluebay_adm/season-performance">
         <BluebayAdmSeasonPerformance />
       </PermissionGuard>
     } />
     <Route path="/client-area/bluebay_adm/wallet-management" element={
-      <PermissionGuard resourcePath="/client-area/bluebay_adm/reports">
+      <PermissionGuard resourcePath="/client-area/bluebay_adm/wallet-management">
         <BluebayAdmWalletManagement />
+      </PermissionGuard>
+    } />
+    <Route path="/client-area/bluebay_adm/gestaopaginas" element={
+      <PermissionGuard resourcePath="/client-area/bluebay_adm/gestaopaginas">
+        <BluebayAdmGestaoPaginas />
+      </PermissionGuard>
+    } />
+    <Route path="/client-area/bluebay_adm/gestaocentrocusto" element={
+      <PermissionGuard resourcePath="/client-area/bluebay_adm/gestaocentrocusto">
+        <BluebayAdmGestaoCentroCusto />
       </PermissionGuard>
     } />
   </>

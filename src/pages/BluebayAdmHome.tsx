@@ -3,12 +3,13 @@ import { Link } from "react-router-dom";
 import { BluebayAdmMenu } from "@/components/bluebay_adm/BluebayAdmMenu";
 import { BluebayAdmBanner } from "@/components/bluebay_adm/BluebayAdmBanner";
 import { ServiceCard } from "@/components/bluebay_adm/ServiceCard";
-import { 
-  FileText, BarChart2, Users, Wallet, ClipboardCheck, ShoppingBag, 
+import {
+  FileText, BarChart2, Users, Wallet, ClipboardCheck, ShoppingBag,
   Receipt, Package, ShoppingCart, TrendingUp, PackageCheck, Tag, Group,
-  PieChart, Zap, ArrowRight
+  PieChart, Zap, ArrowRight, Layout
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 const BluebayAdmHome = () => {
   const quickAccess = [
@@ -165,13 +166,42 @@ const BluebayAdmHome = () => {
       iconColor: "bg-red-100 text-red-600",
       path: "/client-area/bluebay_adm/requests"
     },
+    {
+      title: "Gestão de Páginas",
+      description: "Organize o menu e rotas do sistema",
+      details: "Cadastre novas páginas, defina hierarquia de menus e organize como os usuários acessam as funcionalidades.",
+      icon: Layout,
+      iconColor: "bg-orange-100 text-orange-600",
+      path: "/client-area/bluebay_adm/gestaopaginas",
+      badge: "Configurações"
+    },
+    {
+      title: "Gestão de Centro de Custo",
+      description: "Gerencie os centros de custo",
+      details: "Cadastre novos centros de custo para organizar o faturamento e as permissões de acesso.",
+      icon: Wallet,
+      iconColor: "bg-purple-100 text-purple-600",
+      path: "/client-area/bluebay_adm/gestaocentrocusto",
+      badge: "Configurações"
+    },
   ];
+
+  const { isAdmin, allowedPaths } = useAuth();
+  const normalizedAllowedPaths = (allowedPaths || []).map(p => p.toLowerCase().trim());
+
+  const filteredQuickAccess = quickAccess.filter(item =>
+    isAdmin || normalizedAllowedPaths.includes(item.path.toLowerCase().trim())
+  );
+
+  const filteredServices = services.filter(service =>
+    isAdmin || normalizedAllowedPaths.includes(service.path.toLowerCase().trim())
+  );
 
   return (
     <main className="container-fluid p-0 max-w-full">
       <BluebayAdmBanner />
       <BluebayAdmMenu />
-      
+
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
           <div className="space-y-3 mb-8">
@@ -184,51 +214,55 @@ const BluebayAdmHome = () => {
           </div>
 
           {/* Quick Access Section */}
-          <div className="mb-10">
-            <div className="flex items-center gap-2 mb-4">
-              <Zap className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-semibold text-foreground">Acesso Rápido</h2>
+          {filteredQuickAccess.length > 0 && (
+            <div className="mb-10">
+              <div className="flex items-center gap-2 mb-4">
+                <Zap className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">Acesso Rápido</h2>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                {filteredQuickAccess.map((item, index) => (
+                  <Link
+                    key={index}
+                    to={item.path}
+                    className="group flex flex-col items-center p-4 rounded-xl bg-card border border-border hover:border-primary/40 hover:shadow-md transition-all duration-200"
+                  >
+                    <div className={cn(
+                      "w-12 h-12 rounded-xl flex items-center justify-center mb-3 bg-gradient-to-br text-white shadow-sm group-hover:scale-110 transition-transform",
+                      item.color
+                    )}>
+                      <item.icon className="h-6 w-6" />
+                    </div>
+                    <span className="text-sm font-medium text-center text-foreground group-hover:text-primary transition-colors">
+                      {item.title}
+                    </span>
+                    <ArrowRight className="h-4 w-4 mt-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </Link>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-              {quickAccess.map((item, index) => (
-                <Link
-                  key={index}
-                  to={item.path}
-                  className="group flex flex-col items-center p-4 rounded-xl bg-card border border-border hover:border-primary/40 hover:shadow-md transition-all duration-200"
-                >
-                  <div className={cn(
-                    "w-12 h-12 rounded-xl flex items-center justify-center mb-3 bg-gradient-to-br text-white shadow-sm group-hover:scale-110 transition-transform",
-                    item.color
-                  )}>
-                    <item.icon className="h-6 w-6" />
-                  </div>
-                  <span className="text-sm font-medium text-center text-foreground group-hover:text-primary transition-colors">
-                    {item.title}
-                  </span>
-                  <ArrowRight className="h-4 w-4 mt-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </Link>
-              ))}
-            </div>
-          </div>
+          )}
 
           {/* All Services Section */}
-          <div>
-            <h2 className="text-lg font-semibold text-foreground mb-4">Todos os Módulos</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-              {services.map((service, index) => (
-                <ServiceCard
-                  key={index}
-                  title={service.title}
-                  description={service.description}
-                  details={service.details}
-                  icon={service.icon}
-                  iconColor={service.iconColor}
-                  path={service.path}
-                  badge={service.badge}
-                />
-              ))}
+          {filteredServices.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold text-foreground mb-4">Todos os Módulos</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                {filteredServices.map((service, index) => (
+                  <ServiceCard
+                    key={index}
+                    title={service.title}
+                    description={service.description}
+                    details={service.details}
+                    icon={service.icon}
+                    iconColor={service.iconColor}
+                    path={service.path}
+                    badge={service.badge}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </main>

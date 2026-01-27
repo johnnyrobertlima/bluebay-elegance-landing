@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationBell } from "@/components/admin/NotificationBell";
+import { useToast } from "@/hooks/use-toast";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -12,6 +13,7 @@ const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut, isAdmin } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -29,7 +31,26 @@ const Header = () => {
   ];
 
   const handleSignOut = async () => {
-    await signOut();
+    try {
+      await signOut();
+      toast({
+        title: "Logout realizado com sucesso",
+        description: "Você foi desconectado",
+      });
+    } catch (error: any) {
+      console.error("Erro ao fazer logout:", error);
+      // Suppress 403 errors as they mean session is already gone
+      if (error?.status !== 403) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao fazer logout",
+          description: "Sua sessão foi encerrada localmente.",
+        });
+      }
+    } finally {
+      // Force navigation to clear view state consistently
+      navigate('/login');
+    }
     setIsMobileMenuOpen(false);
   };
 

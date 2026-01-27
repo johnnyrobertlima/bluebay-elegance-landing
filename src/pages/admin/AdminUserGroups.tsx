@@ -39,6 +39,8 @@ import {
 import { ArrowLeft, Plus, Pencil, Trash2, Users, Settings, Loader2, Eye, EyeOff } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RefreshCw } from "lucide-react";
 
 interface UserGroup {
   id: string;
@@ -72,6 +74,12 @@ const AdminUserGroups = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
 
+  // New State for Permissions and Cost Centers
+  const [allPages, setAllPages] = useState<any[]>([]);
+  const [allCostCenters, setAllCostCenters] = useState<string[]>([]);
+  const [selectedPages, setSelectedPages] = useState<Set<string>>(new Set());
+  const [selectedCostCenters, setSelectedCostCenters] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate("/auth");
@@ -83,8 +91,41 @@ const AdminUserGroups = () => {
   useEffect(() => {
     if (user && isAdmin) {
       loadGroups();
+      loadAllPages();
+      loadAllCostCenters();
     }
   }, [user, isAdmin]);
+
+  const loadAllPages = async () => {
+    const { data } = await (supabase as any).from("bluebay_system_page").select("*").order("name");
+    setAllPages(data || []);
+  };
+
+  const loadAllCostCenters = async () => {
+    const { data } = await (supabase as any).from("v_bluebay_unique_cost_centers").select("*");
+    setAllCostCenters(data?.map((d: any) => d.centrocusto) || []);
+  };
+
+  const loadGroupPermissions = async (groupId: string, groupName: string) => {
+    // Pages
+    if (groupName === "Admin" || groupName === "Administradores") {
+      setSelectedPages(new Set(allPages.map(p => p.id)));
+    } else {
+      const { data: pagePerms } = await (supabase as any)
+        .from("bluebay_group_page_permission")
+        .select("page_id")
+        .eq("group_id", groupId)
+        .eq("can_view", true);
+      setSelectedPages(new Set(pagePerms?.map((p: any) => p.page_id) || []));
+    }
+
+    // Cost Centers
+    const { data: ccMaps } = await (supabase as any)
+      .from("bluebay_group_cost_center")
+      .select("centrocusto")
+      .eq("group_id", groupId);
+    setSelectedCostCenters(new Set(ccMaps?.map((c: any) => c.centrocusto) || []));
+  };
 
   const loadGroups = async () => {
     try {
@@ -128,6 +169,7 @@ const AdminUserGroups = () => {
         redirect_after_login: group.redirect_after_login,
         is_active: group.is_active,
       });
+      loadGroupPermissions(group.id, group.name);
     } else {
       setSelectedGroup(null);
       setFormData({
@@ -136,9 +178,35 @@ const AdminUserGroups = () => {
         redirect_after_login: "/",
         is_active: true,
       });
+      setSelectedPages(new Set());
+      setSelectedCostCenters(new Set());
     }
     setIsDialogOpen(true);
   };
+
+  const togglePage = (id: string) => {
+    if (selectedGroup?.name === "Admin" || selectedGroup?.name === "Administradores") {
+      toast({
+        variant: "destructive",
+        title: "Permissão bloqueada",
+        description: "Grupos Administrativos devem ter acesso a todas as páginas.",
+      });
+      return;
+    }
+    const newPages = new Set(selectedPages);
+    if (newPages.has(id)) newPages.delete(id);
+    else newPages.add(id);
+    setSelectedPages(newPages);
+  };
+
+  const toggleCostCenter = (cc: string) => {
+    const newCC = new Set(selectedCostCenters);
+    if (newCC.has(cc)) newCC.delete(cc);
+    else newCC.add(cc);
+    setSelectedCostCenters(newCC);
+  };
+
+  const handleRefreshPages = () => loadAllPages();
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
@@ -154,7 +222,8 @@ const AdminUserGroups = () => {
       setIsSaving(true);
 
       if (selectedGroup) {
-        const { error } = await (supabase as any)
+        // 1. Update Core Data
+        const { error: groupError } = await (supabase as any)
           .from("bluebay_group")
           .update({
             name: formData.name,
@@ -164,8 +233,35 @@ const AdminUserGroups = () => {
           })
           .eq("id", selectedGroup.id);
 
-        if (error) throw error;
-        toast({ title: "Grupo atualizado com sucesso!" });
+        if (groupError) throw groupError;
+
+        // 2. Update Page Permissions (Simplified)
+        // First delete all for this group and then insert selected ones
+        await (supabase as any).from("bluebay_group_page_permission").delete().eq("group_id", selectedGroup.id);
+
+        if (selectedPages.size > 0) {
+          const pageInserts = Array.from(selectedPages).map(id => ({
+            group_id: selectedGroup.id,
+            page_id: id,
+            can_view: true
+          }));
+          const { error: pageError } = await (supabase as any).from("bluebay_group_page_permission").insert(pageInserts);
+          if (pageError) throw pageError;
+        }
+
+        // 3. Update Cost Centers
+        await (supabase as any).from("bluebay_group_cost_center").delete().eq("group_id", selectedGroup.id);
+
+        if (selectedCostCenters.size > 0) {
+          const ccInserts = Array.from(selectedCostCenters).map(cc => ({
+            group_id: selectedGroup.id,
+            centrocusto: cc
+          }));
+          const { error: ccError } = await (supabase as any).from("bluebay_group_cost_center").insert(ccInserts);
+          if (ccError) throw ccError;
+        }
+
+        toast({ title: "Grupo e permissões atualizados com sucesso!" });
       } else {
         const { error } = await (supabase as any).from("bluebay_group").insert({
           name: formData.name,
@@ -381,64 +477,133 @@ const AdminUserGroups = () => {
                 Novo Grupo
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {selectedGroup ? "Editar Grupo" : "Novo Grupo"}
                 </DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome do Grupo</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    placeholder="Ex: Administradores"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Descrição</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    placeholder="Descrição do grupo..."
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="redirect">Página após Login</Label>
-                  <Input
-                    id="redirect"
-                    value={formData.redirect_after_login}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        redirect_after_login: e.target.value,
-                      })
-                    }
-                    placeholder="/dashboard"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    URL para onde o usuário será redirecionado após o login
-                  </p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="is_active">Grupo Ativo</Label>
-                  <Switch
-                    id="is_active"
-                    checked={formData.is_active}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, is_active: checked })
-                    }
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="basic">Básico</TabsTrigger>
+                  <TabsTrigger value="pages">Páginas</TabsTrigger>
+                  <TabsTrigger value="cc">C. Custos</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="basic" className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome do Grupo</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      placeholder="Ex: Administradores"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Descrição</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) =>
+                        setFormData({ ...formData, description: e.target.value })
+                      }
+                      placeholder="Descrição do grupo..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="redirect">Página após Login</Label>
+                    <Input
+                      id="redirect"
+                      value={formData.redirect_after_login}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          redirect_after_login: e.target.value,
+                        })
+                      }
+                      placeholder="/dashboard"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="is_active">Grupo Ativo</Label>
+                    <Switch
+                      id="is_active"
+                      checked={formData.is_active}
+                      onCheckedChange={(checked) =>
+                        setFormData({ ...formData, is_active: checked })
+                      }
+                    />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="pages" className="py-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label>Selecionar Páginas</Label>
+                      <Button variant="outline" size="sm" onClick={handleRefreshPages}>
+                        <RefreshCw className="h-4 w-4 mr-2" /> Atualizar
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto border rounded-md p-2">
+                      {allPages.map((page) => {
+                        const isAssigned = selectedPages.has(page.id);
+                        return (
+                          <div
+                            key={page.id}
+                            className={cn(
+                              "flex items-center space-x-2 p-2 rounded-md transition-colors",
+                              isAssigned ? "bg-green-100 dark:bg-green-900/30" : "hover:bg-muted"
+                            )}
+                          >
+                            <Checkbox
+                              id={`page-${page.id}`}
+                              checked={isAssigned}
+                              onCheckedChange={() => togglePage(page.id)}
+                              disabled={selectedGroup?.name === "Admin" || selectedGroup?.name === "Administradores"}
+                            />
+                            <Label
+                              htmlFor={`page-${page.id}`}
+                              className={cn(
+                                "flex-grow cursor-pointer text-sm",
+                                isAssigned && "font-semibold text-green-700 dark:text-green-400"
+                              )}
+                            >
+                              {page.name}
+                              <span className="text-[10px] text-muted-foreground ml-2">({page.path})</span>
+                            </Label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="cc" className="py-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label>Centros de Custo</Label>
+                    </div>
+                    <div className="grid grid-cols-1 gap-1 max-h-[300px] overflow-y-auto border rounded-md p-2">
+                      {allCostCenters.map((cc) => (
+                        <div key={cc} className="flex items-center space-x-2 p-1 hover:bg-muted rounded text-sm">
+                          <Checkbox
+                            id={`cc-${cc}`}
+                            checked={selectedCostCenters.has(cc)}
+                            onCheckedChange={() => toggleCostCenter(cc)}
+                          />
+                          <Label htmlFor={`cc-${cc}`} className="flex-grow cursor-pointer">
+                            {cc}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+              <div className="flex justify-end gap-2 pt-4 border-t">
                 <Button
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
@@ -447,7 +612,7 @@ const AdminUserGroups = () => {
                 </Button>
                 <Button onClick={handleSave} disabled={isSaving}>
                   {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  {selectedGroup ? "Salvar" : "Criar"}
+                  {selectedGroup ? "Salvar Tudo" : "Criar Grupo"}
                 </Button>
               </div>
             </DialogContent>
@@ -540,16 +705,6 @@ const AdminUserGroups = () => {
                             ) : (
                               <EyeOff className="h-4 w-4" />
                             )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              navigate(`/admin/user-groups/${group.id}/menus`)
-                            }
-                            title="Configurar Menus"
-                          >
-                            <Settings className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"

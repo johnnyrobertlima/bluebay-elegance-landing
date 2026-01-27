@@ -232,6 +232,7 @@ const AdminGroupMenus = () => {
           label: "Configurações", icon: "Settings", sort: 7,
           children: [
             { label: "Gestão de Relatório", path: "/client-area/bluebay_adm/gestao-relatorios", icon: "File" },
+            { label: "Gestão de Páginas", path: "/client-area/bluebay_adm/gestaopaginas", icon: "Layout" },
             { label: "Admin Page", path: "/client-area/bluebay_adm/landing-page", icon: "Layout" },
             { label: "Gestão de Usuário", path: "/admin/users", icon: "Users" },
             { label: "Grupos de Usuarioarios", path: "/admin/user-groups", icon: "Users" }
@@ -270,6 +271,15 @@ const AdminGroupMenus = () => {
 
           if (error) throw error;
           parentId = newParent.id;
+
+          // Also grant VIEW permission for this page if it exists
+          if (pageId) {
+            await (supabase as any).from("bluebay_group_permission").upsert({
+              group_id: groupId,
+              page_id: pageId,
+              can_view: true
+            }, { onConflict: 'group_id,page_id' });
+          }
         }
 
         // Create Children
@@ -293,6 +303,15 @@ const AdminGroupMenus = () => {
                 path: child.path,
                 page_id: childPageId || null
               });
+
+              // Also grant VIEW permission for this page if it exists
+              if (childPageId) {
+                await (supabase as any).from("bluebay_group_permission").upsert({
+                  group_id: groupId,
+                  page_id: childPageId,
+                  can_view: true
+                }, { onConflict: 'group_id,page_id' });
+              }
             }
           }
         }

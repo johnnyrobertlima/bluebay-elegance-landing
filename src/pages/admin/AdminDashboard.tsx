@@ -1,3 +1,4 @@
+import { BluebayAdmMenu } from '@/components/bluebay_adm/BluebayAdmMenu';
 import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,14 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Shield, 
-  Users, 
-  Package, 
-  FileText, 
-  DollarSign, 
-  BarChart3, 
-  Settings, 
+import {
+  Shield,
+  Users,
+  Package,
+  FileText,
+  DollarSign,
+  BarChart3,
+  Settings,
   ArrowLeft,
   ArrowRight,
   Loader2,
@@ -97,9 +98,8 @@ const RecentNotifications = () => {
               {recentNotifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
-                    notification.is_read ? 'bg-muted/30' : 'bg-primary/5'
-                  }`}
+                  className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${notification.is_read ? 'bg-muted/30' : 'bg-primary/5'
+                    }`}
                   onClick={() => !notification.is_read && markAsRead(notification.id)}
                 >
                   {getTypeIcon(notification.type)}
@@ -241,6 +241,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <BluebayAdmMenu />
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">

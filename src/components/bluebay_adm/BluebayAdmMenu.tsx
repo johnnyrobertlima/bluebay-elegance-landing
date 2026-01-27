@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Menu, X, Users, Receipt, BarChart2, FileText, ClipboardCheck, LogOut,
   FileSpreadsheet, Package, ShoppingBag, ShoppingCart, PackageCheck,
-  Group, Tag, Search, Settings, Home, FolderPen, Briefcase, ChevronDown, LayoutDashboard
+  Group, Tag, Search, Settings, Home, FolderPen, Briefcase, ChevronDown, LayoutDashboard,
+  Layers, Box, DollarSign, CreditCard, Warehouse, ClipboardList, Layout, Shield, Wallet
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -17,103 +18,198 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { GlobalSearch } from "./GlobalSearch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useAuth } from "@/hooks/useAuth";
 
 type MenuItem = {
   name: string;
   path?: string;
   icon: React.ReactNode;
   children?: MenuItem[];
+  sort_order?: number;
+};
+
+// Map string icon names to components
+const IconMap: Record<string, any> = {
+  Home: Home,
+  Database: FolderPen,
+  Users: Users,
+  Layers: Layers,
+  Box: Box,
+  FileText: FileText,
+  Briefcase: Briefcase,
+  DollarSign: DollarSign,
+  CreditCard: CreditCard,
+  ShoppingCart: ShoppingCart,
+  ShoppingBag: ShoppingBag,
+  Package: Package,
+  Tag: Tag,
+  BarChart: BarChart2,
+  BarChart2: BarChart2,
+  Warehouse: Warehouse,
+  ClipboardList: ClipboardList,
+  File: FileText,
+  FileSpreadsheet: FileSpreadsheet,
+  Settings: Settings,
+  Layout: Layout,
+  LayoutDashboard: LayoutDashboard,
+  Shield: Shield,
+  Receipt: Receipt,
+  PackageCheck: PackageCheck,
+  Group: Group,
+  Search: Search,
+  ClipboardCheck: ClipboardCheck
 };
 
 export const BluebayAdmMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  // Mobile submenus state
   const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({});
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [isLoadingMenu, setIsLoadingMenu] = useState(true);
 
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, isAdmin, allowedPaths, homePage } = useAuth();
 
   const toggleSubmenu = (name: string) => {
     setOpenSubmenus(prev => ({ ...prev, [name]: !prev[name] }));
   };
 
-  const menuItems: MenuItem[] = [
-    {
-      name: "Home Bluebay",
-      path: "/client-area/bluebay_adm",
-      icon: <Home className="h-4 w-4 mr-2" />
-    },
-    {
-      name: "Cadastros",
-      icon: <FolderPen className="h-4 w-4 mr-2" />,
-      children: [
-        { name: "Gerenciar Grupos", path: "/client-area/bluebay_adm/item-grupo-management", icon: <Group className="h-4 w-4 mr-2" /> },
-        { name: "Gerenciar Itens", path: "/client-area/bluebay_adm/item-management", icon: <PackageCheck className="h-4 w-4 mr-2" /> },
-        { name: "Relatório de Itens", path: "/client-area/bluebay_adm/reports", icon: <FileText className="h-4 w-4 mr-2" /> },
-      ]
-    },
-    {
-      name: "Comercial",
-      icon: <Briefcase className="h-4 w-4 mr-2" />,
-      children: [
-        { name: "Faturamento", path: "/client-area/bluebay_adm/financial", icon: <Receipt className="h-4 w-4 mr-2" /> },
-        { name: "Financeiro", path: "/client-area/bluebay_adm/financeiromanager", icon: <FileSpreadsheet className="h-4 w-4 mr-2" /> },
-        { name: "Pedidos", path: "/client-area/bluebay_adm/pedidos", icon: <ShoppingBag className="h-4 w-4 mr-2" /> },
-      ]
-    },
-    {
-      name: "Clientes",
-      icon: <Users className="h-4 w-4 mr-2" />,
-      children: [
-        { name: "Lista de Clientes", path: "/client-area/bluebay_adm/clients", icon: <Users className="h-4 w-4 mr-2" /> },
-        { name: "Gerenciamento de Carteira", path: "/client-area/bluebay_adm/wallet-management", icon: <Briefcase className="h-4 w-4 mr-2" /> },
-      ]
-    },
-    {
-      name: "Produtos",
-      icon: <Package className="h-4 w-4 mr-2" />,
-      children: [
-        { name: "Etiquetas do Produto", path: "/client-area/bluebay_adm/etiquetas", icon: <Tag className="h-4 w-4 mr-2" /> },
-        { name: "Análise de Compra", path: "/client-area/bluebay_adm/annalisedecompra", icon: <ShoppingCart className="h-4 w-4 mr-2" /> },
-        { name: "Desempenho por Estação", path: "/client-area/bluebay_adm/season-performance", icon: <BarChart2 className="h-4 w-4 mr-2" /> },
-        { name: "Estoque", path: "/client-area/bluebay_adm/estoque", icon: <Package className="h-4 w-4 mr-2" /> },
-      ]
-    },
-    {
-      name: "Solicitações",
-      path: "/client-area/bluebay_adm/requests",
-      icon: <ClipboardCheck className="h-4 w-4 mr-2" />
-    },
-    {
-      name: "Configurações",
-      icon: <Settings className="h-4 w-4 mr-2" />,
-      children: [
-        { name: "Gestão de Usuários", path: "/admin/users", icon: <Users className="h-4 w-4 mr-2" /> },
-        { name: "Grupos de Usuários", path: "/admin/user-groups", icon: <Group className="h-4 w-4 mr-2" /> },
-        { name: "Gestão de Relatório", path: "/client-area/bluebay_adm/gestao-relatorios", icon: <FileSpreadsheet className="h-4 w-4 mr-2" /> },
-        { name: "Página Inicial", path: "/client-area/bluebay_adm/landing-page", icon: <LayoutDashboard className="h-4 w-4 mr-2" /> },
-      ]
-    }
-  ];
+  const getIcon = (iconName: string | undefined) => {
+    if (!iconName) return <Home className="h-4 w-4 mr-2" />;
+    const IconComponent = IconMap[iconName] || Home;
+    return <IconComponent className="h-4 w-4 mr-2" />;
+  };
+
+  useEffect(() => {
+    const fetchMenu = async () => {
+      if (!user) return;
+
+      try {
+        setIsLoadingMenu(true);
+        // 1. Fetch ALL active pages
+        const { data: allPages, error } = await (supabase as any)
+          .from("bluebay_system_page")
+          .select("*")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true })
+          .order("name", { ascending: true });
+
+        if (error) throw error;
+
+        // 2. Filter pages based on permissions
+        // We build a set of visible IDs to ensure parents are always included
+        const visiblePageIds = new Set<string>();
+        const allPagesMap = new Map<string, any>();
+        (allPages || []).forEach(p => allPagesMap.set(p.id, p));
+
+        const normalizedAllowedPaths = (allowedPaths || []).map(p => p.toLowerCase().trim());
+
+        (allPages || []).forEach((page: any) => {
+          const path = page.path?.toLowerCase().trim();
+          if (isAdmin || normalizedAllowedPaths.includes(path)) {
+            visiblePageIds.add(page.id);
+
+            // Safety: Ensure all parents are visible too
+            let parentId = page.parent_id;
+            while (parentId && allPagesMap.has(parentId)) {
+              if (visiblePageIds.has(parentId)) break;
+              visiblePageIds.add(parentId);
+              parentId = allPagesMap.get(parentId).parent_id;
+            }
+          }
+        });
+
+        // 3. Build hierarchy from visible set
+        const pageMap = new Map<string, MenuItem>();
+
+        // Pass 1: Create visible items
+        visiblePageIds.forEach(id => {
+          const page = allPagesMap.get(id);
+          pageMap.set(id, {
+            name: page.name,
+            path: page.path,
+            icon: getIcon(page.icon),
+            children: []
+          });
+        });
+
+        // Pass 2: Connect children
+        visiblePageIds.forEach(id => {
+          const page = allPagesMap.get(id);
+          const item = pageMap.get(id)!;
+          if (page.parent_id && pageMap.has(page.parent_id)) {
+            pageMap.get(page.parent_id)!.children!.push(item);
+          }
+        });
+
+        // Pass 3: Final root list (Filter out orphan roots as per request)
+        const rootItems: MenuItem[] = [];
+
+        // ALways add Home button first, linking to user's homePage
+        rootItems.push({
+          name: "Início",
+          path: homePage || "/client-area/bluebay_adm",
+          icon: <Home className="h-4 w-4 mr-2" />
+        });
+
+        visiblePageIds.forEach(id => {
+          const page = allPagesMap.get(id);
+          if (!page.parent_id) {
+            const item = pageMap.get(id)!;
+            // Only show root if it has children
+            // Standalone roots are accessible but not shown in menu as per user request
+            if (item.children && item.children.length > 0) {
+              // Avoid duplicates if Home is also in system pages
+              const path = item.path?.toLowerCase().trim();
+              const homePath = homePage?.toLowerCase().trim();
+              if (path !== homePath) {
+                rootItems.push(item);
+              }
+            }
+          }
+        });
+
+        setMenuItems(rootItems);
+      } catch (error) {
+        console.error("Error building dynamic menu:", error);
+        toast({ variant: "destructive", title: "Erro ao carregar menu dinâmico" });
+      } finally {
+        setIsLoadingMenu(false);
+      }
+    };
+
+    fetchMenu();
+  }, [user, isAdmin, allowedPaths]);
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      // Attempt to sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
       toast({
         title: "Logout realizado com sucesso",
         description: "Você foi desconectado",
       });
-      navigate('/login');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao fazer logout:", error);
+      // If it's a 403 or any other error, we still want to redirect the user
+      // and clear the local session perception if possible.
+      // useAuth hook will likely pick up the session change anyway or we force navigation.
+      if (error.status === 403) {
+        // Session likely already invalid
+      }
       toast({
-        variant: "destructive",
-        title: "Erro ao fazer logout",
-        description: "Não foi possível desconectar. Tente novamente.",
+        title: "Desconectado",
+        description: "Sessão encerrada.",
       });
+    } finally {
+      navigate('/login');
     }
   };
+
+  if (!user) return null; // Don't show menu if not logged in
 
   return (
     <>
@@ -123,7 +219,7 @@ export const BluebayAdmMenu = () => {
           <div className="hidden md:flex justify-between items-center py-3">
             <div className="flex items-center space-x-1">
               {menuItems.map((item) => (
-                item.children ? (
+                item.children && item.children.length > 0 ? (
                   <DropdownMenu key={item.name}>
                     <DropdownMenuTrigger className="flex items-center px-3 py-2 rounded-md text-white hover:bg-primary-700 transition-colors whitespace-nowrap outline-none focus:bg-primary-700 data-[state=open]:bg-primary-700">
                       {item.icon}
@@ -132,8 +228,8 @@ export const BluebayAdmMenu = () => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       {item.children.map((child) => (
-                        <DropdownMenuItem key={child.path} asChild>
-                          <NavLink to={child.path!} className="flex items-center cursor-pointer w-full">
+                        <DropdownMenuItem key={child.name} asChild>
+                          <NavLink to={child.path || "#"} className="flex items-center cursor-pointer w-full">
                             {child.icon}
                             {child.name}
                           </NavLink>
@@ -143,15 +239,14 @@ export const BluebayAdmMenu = () => {
                   </DropdownMenu>
                 ) : (
                   <NavLink
-                    key={item.path}
-                    to={item.path!}
+                    key={item.name}
+                    to={item.path || "#"}
                     className={({ isActive }) =>
                       cn(
                         "flex items-center px-3 py-2 rounded-md text-white hover:bg-primary-700 transition-colors whitespace-nowrap",
                         isActive ? "bg-primary-800" : ""
                       )
                     }
-                    end={item.path === "/client-area/bluebay_adm"}
                   >
                     {item.icon}
                     {item.name}
@@ -218,7 +313,7 @@ export const BluebayAdmMenu = () => {
           {isOpen && (
             <div className="md:hidden py-2 space-y-1 max-h-[calc(100vh-64px)] overflow-y-auto">
               {menuItems.map((item) => (
-                item.children ? (
+                item.children && item.children.length > 0 ? (
                   <Collapsible
                     key={item.name}
                     open={openSubmenus[item.name]}
@@ -234,8 +329,8 @@ export const BluebayAdmMenu = () => {
                     <CollapsibleContent className="space-y-1 bg-primary-800/20 rounded-md my-1">
                       {item.children.map((child) => (
                         <NavLink
-                          key={child.path}
-                          to={child.path!}
+                          key={child.name}
+                          to={child.path || "#"}
                           className={({ isActive }) =>
                             cn(
                               "flex items-center pl-8 pr-4 py-2 text-sm rounded-md transition-colors text-white",
@@ -252,8 +347,8 @@ export const BluebayAdmMenu = () => {
                   </Collapsible>
                 ) : (
                   <NavLink
-                    key={item.path}
-                    to={item.path!}
+                    key={item.name}
+                    to={item.path || "#"}
                     className={({ isActive }) =>
                       cn(
                         "flex items-center px-4 py-2 text-sm rounded-md transition-colors text-white",
@@ -261,7 +356,6 @@ export const BluebayAdmMenu = () => {
                       )
                     }
                     onClick={() => setIsOpen(false)}
-                    end={item.path === "/client-area/bluebay_adm"}
                   >
                     {item.icon}
                     {item.name}

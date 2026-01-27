@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,16 +33,28 @@ const Auth = () => {
     fullName: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
-  const { signIn, signUp, user, loading } = useAuth();
+
+  const { signIn, signUp, user, loading, homePage } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!loading && user) {
-      navigate('/');
+    // 1. If still loading or no user, do nothing (wait)
+    if (loading || !user) return;
+
+    // 2. Once loading is false and user is set, 
+    // useAuth already fetched homePage.
+    if (homePage && homePage !== "/auth" && homePage !== "/login") {
+      console.log("Auth: Redirecting to designated homePage:", homePage);
+      navigate(homePage);
+    } else {
+      console.log("Auth: No specific redirect, staying or going to /");
+      // If they are on /auth, we should at least send them to / or dashboard
+      if (window.location.pathname === "/auth" || window.location.pathname === "/login") {
+        navigate("/");
+      }
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, homePage]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -166,8 +179,8 @@ const Auth = () => {
               {isLogin ? 'Entrar na conta' : 'Criar conta'}
             </h2>
             <p className="font-body text-muted-foreground text-center mb-6">
-              {isLogin 
-                ? 'Acesse sua área exclusiva' 
+              {isLogin
+                ? 'Acesse sua área exclusiva'
                 : 'Cadastre-se para acessar ofertas exclusivas'}
             </p>
 
@@ -278,8 +291,8 @@ const Auth = () => {
                 }}
                 className="font-body text-sm text-muted-foreground hover:text-primary transition-colors"
               >
-                {isLogin 
-                  ? 'Não tem conta? Cadastre-se' 
+                {isLogin
+                  ? 'Não tem conta? Cadastre-se'
                   : 'Já tem conta? Faça login'}
               </button>
             </div>
