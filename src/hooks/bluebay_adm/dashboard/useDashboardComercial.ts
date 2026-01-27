@@ -1,6 +1,6 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { subDays } from 'date-fns';
+import { subDays, format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import {
   fetchDashboardStats,
@@ -27,8 +27,8 @@ interface UseDashboardComercialReturn {
   setSelectedCentroCusto: (centroCusto: string | null) => void;
   fetchDayData: (date: Date) => Promise<FaturamentoItem[]>;
   fetchDayOrderData: (date: Date) => Promise<PedidoItem[]>;
-  selectedRepresentative: string | null;
-  setSelectedRepresentative: (rep: string | null) => void;
+  selectedRepresentative: string[];
+  setSelectedRepresentative: (rep: string[]) => void;
   cityStats: CitySalesStat[];
   isCityLoading: boolean;
   selectedCity: { city: string; uf: string } | null;
@@ -38,6 +38,10 @@ interface UseDashboardComercialReturn {
   isProductLoading: boolean;
   clientStats: ClientStat[];
   isClientLoading: boolean;
+  selectedClient: string[];
+  setSelectedClient: (client: string[]) => void;
+  selectedProduct: string[];
+  setSelectedProduct: (product: string[]) => void;
 }
 
 const defaultData: DashboardComercialData = {
@@ -57,6 +61,7 @@ const defaultData: DashboardComercialData = {
   }
 };
 
+
 export const useDashboardComercial = (): UseDashboardComercialReturn => {
   const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 30));
   const [endDate, setEndDate] = useState<Date>(new Date());
@@ -74,7 +79,9 @@ export const useDashboardComercial = (): UseDashboardComercialReturn => {
   const [isClientLoading, setIsClientLoading] = useState(false);
 
   const [selectedCentroCusto, setSelectedCentroCusto] = useState<string | null>(null);
-  const [selectedRepresentative, setSelectedRepresentative] = useState<string | null>(null);
+  const [selectedRepresentative, setSelectedRepresentative] = useState<string[]>([]);
+  const [selectedClient, setSelectedClient] = useState<string[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<string[]>([]);
 
   const [dashboardData, setDashboardData] = useState<DashboardComercialData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -146,7 +153,9 @@ export const useDashboardComercial = (): UseDashboardComercialReturn => {
           selectedCity.city,
           selectedCity.uf,
           selectedCentroCusto,
-          selectedRepresentative
+          selectedRepresentative,
+          selectedClient,
+          selectedProduct
         );
 
       } else {
@@ -156,6 +165,8 @@ export const useDashboardComercial = (): UseDashboardComercialReturn => {
           endDate,
           selectedCentroCusto,
           selectedRepresentative,
+          selectedClient,
+          selectedProduct,
           signal
         );
       }
@@ -202,7 +213,7 @@ export const useDashboardComercial = (): UseDashboardComercialReturn => {
         activeRequestRef.current = null;
       }
     }
-  }, [startDate, endDate, selectedCentroCusto, selectedRepresentative, selectedCity]); // Added selectedCity
+  }, [startDate, endDate, selectedCentroCusto, selectedRepresentative, selectedCity, selectedClient, selectedProduct]);
 
   const refreshData = useCallback(async () => {
     if (isLoading || isDetailsLoading) return;
@@ -224,7 +235,7 @@ export const useDashboardComercial = (): UseDashboardComercialReturn => {
         activeRequestRef.current.abort();
       }
     };
-  }, [fetchData, requestId]); // Removed selectedCentroCusto from dependency array as it's already in fetchData dependencies
+  }, [fetchData, requestId]); // fetchData dependencies handle the rest
 
   // Mount effect
   useEffect(() => {
@@ -236,18 +247,14 @@ export const useDashboardComercial = (): UseDashboardComercialReturn => {
 
   /* New Lazy Loading Helpers */
   const fetchDayData = useCallback(async (date: Date) => {
-    // Check if checks are needed or state update
-    // For now, we return the promise so the component can wait
-    const result = await fetchDailyDetails(date, selectedCentroCusto, selectedRepresentative); // Lazy load might not need same global signal, or maybe it should?
-    // Ideally we should track this request too if we want to cancel it on unmount.
-    // For now, let's leave it as is, or pass a new signal if needed.
+    const result = await fetchDailyDetails(date, selectedCentroCusto, selectedRepresentative, selectedClient, selectedProduct);
     return result;
-  }, [selectedCentroCusto]);
+  }, [selectedCentroCusto, selectedRepresentative, selectedClient, selectedProduct]);
 
   const fetchDayOrderData = useCallback(async (date: Date) => {
-    const result = await fetchDailyOrders(date, selectedCentroCusto, selectedRepresentative);
+    const result = await fetchDailyOrders(date, selectedCentroCusto, selectedRepresentative, selectedClient, selectedProduct);
     return result;
-  }, [selectedCentroCusto, selectedRepresentative]);
+  }, [selectedCentroCusto, selectedRepresentative, selectedClient, selectedProduct]);
 
   // Fetch Lazy Data (Products, Cities)
   useEffect(() => {
@@ -258,14 +265,14 @@ export const useDashboardComercial = (): UseDashboardComercialReturn => {
       setIsCityLoading(true);
       // console.log('[HOOK] Fetching Lazy Stats (City)...');
 
-      const formattedStartDate = startDate.toISOString().split('T')[0];
-      const formattedEndDate = endDate.toISOString().split('T')[0];
+      const formattedStartDate = format(startDate, 'yyyy-MM-dd');
+      const formattedEndDate = format(endDate, 'yyyy-MM-dd');
 
       try {
         const cities = await fetchCityStatsV2(
           formattedStartDate,
           formattedEndDate,
-          { centroCusto: selectedCentroCusto, representative: selectedRepresentative }
+          { centroCusto: selectedCentroCusto, representative: selectedRepresentative, cliente: selectedClient, produto: selectedProduct }
         );
         console.log('[HOOK] Received Cities:', cities.length);
         setCityStats(cities);
@@ -277,34 +284,35 @@ export const useDashboardComercial = (): UseDashboardComercialReturn => {
     }
 
     fetchLazyStats();
-  }, [startDate, endDate, selectedCentroCusto, selectedRepresentative]);
+  }, [startDate, endDate, selectedCentroCusto, selectedRepresentative, selectedClient, selectedProduct]);
 
   // Lazy Load Products
   useEffect(() => {
     async function fetchProducts() {
       setIsProductLoading(true);
       try {
-        const stats = await fetchProductStats(startDate, endDate, selectedCentroCusto, selectedRepresentative);
+        // Need to pass filters to fetchProductStats as well
+        const stats = await fetchProductStats(startDate, endDate, selectedCentroCusto, selectedRepresentative, selectedClient, selectedProduct);
         setProductStats(stats);
       } catch (err) { console.error(err); }
       finally { setIsProductLoading(false); }
     }
     fetchProducts();
-  }, [startDate, endDate, selectedCentroCusto, selectedRepresentative]);
+  }, [startDate, endDate, selectedCentroCusto, selectedRepresentative, selectedClient, selectedProduct]);
 
   // Lazy Load Clients
   useEffect(() => {
     async function fetchClients() {
       setIsClientLoading(true);
       try {
-        const stats = await fetchClientStats(startDate, endDate, selectedCentroCusto, selectedRepresentative);
+        const stats = await fetchClientStats(startDate, endDate, selectedCentroCusto, selectedRepresentative, selectedClient, selectedProduct);
         console.log(`[HOOK] ClientStats fetched: ${stats.length} items`);
         setClientStats(stats);
       } catch (err) { console.error('[HOOK] ClientStats Error:', err); }
       finally { setIsClientLoading(false); }
     }
     fetchClients();
-  }, [startDate, endDate, selectedCentroCusto, selectedRepresentative]);
+  }, [startDate, endDate, selectedCentroCusto, selectedRepresentative, selectedClient, selectedProduct]);
 
   return {
     dashboardData,
@@ -328,6 +336,10 @@ export const useDashboardComercial = (): UseDashboardComercialReturn => {
     productStats,
     isProductLoading,
     clientStats,
-    isClientLoading
+    isClientLoading,
+    selectedClient,
+    setSelectedClient,
+    selectedProduct,
+    setSelectedProduct
   };
 };

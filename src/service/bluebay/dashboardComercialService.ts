@@ -10,21 +10,37 @@ export const fetchDashboardStats = async (
   startDate: Date,
   endDate: Date,
   centroCusto: string | null = null,
-  representative: string | null = null,
+  representative: string[] = [],
+  cliente: string[] = [],
+  produto: string[] = [],
   signal?: AbortSignal
 ): Promise<Partial<DashboardComercialData>> => {
+  // If we have complex filters (Clients, Products, or MULTIPLE Representatives), usage Manual Calc.
+  // Standard RPC only supports 1 representative and no client/product filters currently.
+  const hasMultipleReps = representative && representative.length > 1;
+  const hasClientFilter = cliente && cliente.length > 0;
+  const hasProductFilter = produto && produto.length > 0;
+
+  if (hasClientFilter || hasProductFilter || hasMultipleReps) {
+    return calcDashboardStatsManual(startDate, endDate, centroCusto, representative, cliente, produto);
+  }
+
+  // Single Rep or No Rep -> Try RPC
+  const singleRep = (representative && representative.length === 1) ? representative[0] : null;
+
   try {
     const formattedStartDate = format(startDate, 'yyyy-MM-dd 00:00:00');
     const formattedEndDate = format(endDate, 'yyyy-MM-dd 23:59:59');
 
     console.log(`[SERVICE] Buscando estatísticas via RPC: ${formattedStartDate} até ${formattedEndDate}`);
-    console.log(`[SERVICE] Params -> CostCenter: ${centroCusto}, Rep: ${representative}`);
+    console.log(`[SERVICE] Params -> CostCenter: ${centroCusto}, Rep: ${singleRep}`);
 
     const { data: stats, error: statsError } = await supabase.rpc('get_commercial_dashboard_stats_v2', {
       p_start_date: formattedStartDate,
       p_end_date: formattedEndDate,
       p_centro_custo: centroCusto && centroCusto !== "none" ? centroCusto : null,
-      p_representante: representative && representative !== "none" ? representative : null
+      p_representante: singleRep && singleRep !== "none" ? singleRep : null
+      // p_cliente and p_produto are not supported by this RPC version
     });
 
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
@@ -113,6 +129,9 @@ export const fetchDashboardDetails = async (
   startDate: Date,
   endDate: Date,
   centroCusto: string | null = null,
+  representative: string[] = [],
+  cliente: string[] = [],
+  produto: string[] = [],
   limit: number = 200000,
   signal?: AbortSignal
 ): Promise<FaturamentoItem[]> => {
@@ -150,6 +169,18 @@ export const fetchDashboardDetails = async (
         detailQuery = detailQuery.is('centrocusto', null);
       } else if (centroCusto && centroCusto !== "none") {
         detailQuery = detailQuery.eq('centrocusto', centroCusto);
+      }
+
+      if (representative && representative.length > 0) {
+        detailQuery = detailQuery.in('representante', representative);
+      }
+
+      if (cliente && cliente.length > 0) {
+        detailQuery = detailQuery.in('pes_codigo', cliente);
+      }
+
+      if (produto && produto.length > 0) {
+        detailQuery = detailQuery.in('item_codigo', produto);
       }
 
       const { data: detailItems, error: detailError } = await detailQuery;
@@ -225,6 +256,9 @@ export const fetchDashboardOrders = async (
   startDate: Date,
   endDate: Date,
   centroCusto: string | null = null,
+  representative: string[] = [],
+  cliente: string[] = [],
+  produto: string[] = [],
   limit: number = 200000,
   signal?: AbortSignal
 ): Promise<import("./dashboardComercialTypes").PedidoItem[]> => {
@@ -262,6 +296,18 @@ export const fetchDashboardOrders = async (
         query = query.eq('CENTROCUSTO', centroCusto);
       }
 
+      if (representative && representative.length > 0) {
+        query = query.in('REPRESENTANTE', representative);
+      }
+
+      if (cliente && cliente.length > 0) {
+        query = query.in('PES_CODIGO', cliente);
+      }
+
+      if (produto && produto.length > 0) {
+        query = query.in('ITEM_CODIGO', produto);
+      }
+
       const { data: orderItems, error } = await query;
 
       if (error) {
@@ -297,7 +343,6 @@ export const fetchDashboardOrders = async (
       CENTROCUSTO: item.CENTROCUSTO,
       CENTRO_CUSTO: item.CENTROCUSTO,
       REPRESENTANTE: item.REPRESENTANTE,
-      // Helper field for easy display
       VALOR_TOTAL: (item.QTDE_PEDIDA || 0) * (item.VALOR_UNITARIO || 0)
     }));
   } catch (error) {
@@ -333,7 +378,9 @@ export const fetchDashboardComercialData = async (
 export const fetchDailyDetails = async (
   date: Date,
   centroCusto: string | null = null,
-  representative: string | null = null,
+  representative: string[] = [],
+  cliente: string[] = [],
+  produto: string[] = [],
   signal?: AbortSignal
 ): Promise<FaturamentoItem[]> => {
   try {
@@ -396,8 +443,16 @@ export const fetchDailyDetails = async (
       query = query.eq('centrocusto', centroCusto);
     }
 
-    if (representative) {
-      query = query.eq('representante', representative);
+    if (representative && representative.length > 0) {
+      query = query.in('representante', representative);
+    }
+
+    if (cliente && cliente.length > 0) {
+      query = query.in('pes_codigo', cliente);
+    }
+
+    if (produto && produto.length > 0) {
+      query = query.in('item_codigo', produto);
     }
 
     if (signal) {
@@ -501,7 +556,9 @@ export const fetchDailyDetails = async (
 export const fetchDailyOrders = async (
   date: Date,
   centroCusto: string | null = null,
-  representative: string | null = null,
+  representative: string[] = [],
+  cliente: string[] = [],
+  produto: string[] = [],
   signal?: AbortSignal
 ): Promise<import("./dashboardComercialTypes").PedidoItem[]> => {
   try {
@@ -525,12 +582,16 @@ export const fetchDailyOrders = async (
       query = query.eq('CENTROCUSTO', centroCusto);
     }
 
-    if (representative) {
-      if (String(representative) === '0') {
-        query = query.is('REPRESENTANTE', null);
-      } else {
-        query = query.eq('REPRESENTANTE', representative);
-      }
+    if (representative && representative.length > 0) {
+      query = query.in('REPRESENTANTE', representative);
+    }
+
+    if (cliente && cliente.length > 0) {
+      query = query.in('PES_CODIGO', cliente);
+    }
+
+    if (produto && produto.length > 0) {
+      query = query.in('ITEM_CODIGO', produto);
     }
 
     if (signal) {
@@ -542,28 +603,23 @@ export const fetchDailyOrders = async (
 
     // Fetch nicknames (APELIDO) from BLUEBAY_PESSOA
     let pessoaMap = new Map<string, string>();
-    const pesCodigos = (data || []).map((d: any) => d.PES_CODIGO).filter((c: any) => c);
+    const clientCodigos = (data || []).map((d: any) => d.PES_CODIGO).filter((c: any) => c);
+    const repCodigos = (data || []).map((d: any) => d.REPRESENTANTE).filter((c: any) => c);
+    const allPesCodigos = [...new Set([...clientCodigos, ...repCodigos])];
 
-    if (pesCodigos.length > 0) {
-      const uniquePesCodigos = [...new Set(pesCodigos)];
-      console.log('[DEBUG_SERVICE] Unique PES_CODIGOS for orders:', uniquePesCodigos);
-
+    if (allPesCodigos.length > 0) {
       const { data: pessoasData, error: pessoasError } = await supabase
         .from('BLUEBAY_PESSOA')
         .select('PES_CODIGO, APELIDO, RAZAOSOCIAL')
-        .in('PES_CODIGO', uniquePesCodigos);
+        .in('PES_CODIGO', allPesCodigos);
 
       if (pessoasData) {
-        console.log('[DEBUG_SERVICE] Found Pessoas:', pessoasData.length, pessoasData[0]);
         pessoasData.forEach((p: any) => {
           if (p.PES_CODIGO) {
-            // Store by string key to avoid type mismatches
             const name = p.APELIDO && p.APELIDO.trim() !== '' ? p.APELIDO : p.RAZAOSOCIAL;
             pessoaMap.set(String(p.PES_CODIGO), name);
           }
         });
-      } else {
-        console.warn('[DEBUG_SERVICE] No Pessoas found or data is null', pessoasError);
       }
     }
 
@@ -611,6 +667,7 @@ export const fetchDailyOrders = async (
         REPRESENTANTE: item.REPRESENTANTE,
 
         APELIDO: mappedApelido,
+        REPRESENTANTE_NOME: pessoaMap.get(String(item.REPRESENTANTE)) || `Rep ${item.REPRESENTANTE || ''}`,
         DESCRICAO: itemMap.get(String(itemCodigo)) || '',
         VALOR_TOTAL: (item.QTDE_PEDIDA || 0) * (item.VALOR_UNITARIO || 0)
       };
@@ -628,11 +685,13 @@ export const fetchProductStats = async (
   startDate: Date,
   endDate: Date,
   centroCusto: string | null,
-  representative: string | null
+  representative: string[] = [],
+  cliente: string[] = [],
+  produto: string[] = []
 ): Promise<import("./dashboardComercialTypes").ProductCategoryStat[]> => {
   try {
-    const start = `${format(startDate, 'yyyy-MM-dd')} 00:00:00`;
-    const end = `${format(endDate, 'yyyy-MM-dd')} 23:59:59`;
+    const start = format(startDate, 'yyyy-MM-dd 00:00:00');
+    const end = format(endDate, 'yyyy-MM-dd 23:59:59');
 
     console.log(`[SERVICE] Fetching Product Stats: ${start} to ${end}`);
     console.log(`[SERVICE] Product Stats Params -> CostCenter: ${centroCusto}, Rep: ${representative}`);
@@ -665,12 +724,16 @@ export const fetchProductStats = async (
         query = query.is('CENTROCUSTO', null);
       }
 
-      if (representative) {
-        if (String(representative) === '0') {
-          query = query.is('REPRESENTANTE', null);
-        } else {
-          query = query.eq('REPRESENTANTE', representative);
-        }
+      if (representative && representative.length > 0) {
+        query = query.in('REPRESENTANTE', representative);
+      }
+
+      if (cliente && cliente.length > 0) {
+        query = query.in('PES_CODIGO', cliente);
+      }
+
+      if (produto && produto.length > 0) {
+        query = query.in('ITEM_CODIGO', produto);
       }
 
       const { data: chunk, error } = await query;
@@ -844,105 +907,6 @@ export const fetchProductStats = async (
   }
 };
 
-// Renaming to force refresh
-export const fetchCityStatsV2 = async (
-  startDate: string,
-  endDate: string,
-  filters: { centroCusto?: string | null; representative?: string | number | null } = {}
-): Promise<import('./dashboardComercialTypes').CitySalesStat[]> => {
-  console.log(`[SERVICE] Fetching City Stats V2 (CACHE BUST): ${startDate} to ${endDate}`);
-
-  let query = supabase
-    .from('BLUEBAY_PEDIDO')
-    .select('PES_CODIGO, TOTAL_PRODUTO, DATA_PEDIDO, CENTROCUSTO, REPRESENTANTE')
-    .gte('DATA_PEDIDO', startDate)
-    .lte('DATA_PEDIDO', endDate)
-    .neq('STATUS', '4');
-
-  if (filters.centroCusto) {
-    query = query.eq('CENTROCUSTO', filters.centroCusto);
-  }
-  if (filters.representative) {
-    query = query.eq('REPRESENTANTE', filters.representative);
-  }
-
-  let allOrders: any[] = [];
-  const pageSize = 1000;
-  let from = 0;
-  let fetchMore = true;
-
-  while (fetchMore) {
-    const { data: orders, error } = await query.range(from, from + pageSize - 1);
-    if (error) {
-      console.error('[SERVICE] Error fetching orders for City Stats:', error);
-      return [];
-    }
-    if (orders) {
-      allOrders = [...allOrders, ...orders];
-      if (orders.length < pageSize) fetchMore = false;
-      else from += pageSize;
-    } else {
-      fetchMore = false;
-    }
-  }
-
-  console.log(`[SERVICE] Orders fetched for City Stats: ${allOrders.length}`);
-
-  if (allOrders.length === 0) return [];
-
-  const uniquePes = [...new Set(allOrders.map((o) => o.PES_CODIGO).filter(Boolean))];
-  console.log(`[SERVICE] Unique PES_CODIGO count: ${uniquePes.length}`);
-
-  const citiesMap = new Map<string, { city: string, uf: string }>();
-
-  if (uniquePes.length > 0) {
-    const batchSize = 100;
-    for (let i = 0; i < uniquePes.length; i += batchSize) {
-      const batchCodes = uniquePes.slice(i, i + batchSize);
-      const { data: people, error } = await supabase
-        .from('BLUEBAY_PESSOA')
-        .select('PES_CODIGO, CIDADE, UF')
-        .in('PES_CODIGO', batchCodes);
-
-      if (error) console.error('[SERVICE] Error fetching people batch:', error);
-
-      people?.forEach((p: any) => {
-        if (p.CIDADE) {
-          citiesMap.set(String(p.PES_CODIGO), { city: p.CIDADE, uf: p.UF || '' });
-        }
-      });
-    }
-  }
-
-  console.log(`[SERVICE] Cities mapped: ${citiesMap.size}`);
-
-  const statsMap = new Map<string, { city: string, uf: string, total: number, qty: number }>();
-
-  allOrders.forEach(order => {
-    const pesCode = String(order.PES_CODIGO);
-    const cityInfo = citiesMap.get(pesCode);
-
-    // if (!cityInfo) return; // Skip if no city found
-
-    const cityKey = cityInfo ? `${cityInfo.city} - ${cityInfo.uf}` : 'SEM CIDADE';
-    const city = cityInfo ? cityInfo.city : 'SEM CIDADE';
-    const uf = cityInfo ? cityInfo.uf : '-';
-
-    const current = statsMap.get(cityKey) || { city, uf, total: 0, qty: 0 };
-    current.total += (Number(order.TOTAL_PRODUTO) || 0);
-    current.qty += 1;
-    statsMap.set(cityKey, current);
-  });
-
-  const result = Array.from(statsMap.values()).map(s => ({
-    city: s.city,
-    uf: s.uf,
-    totalFaturado: s.total,
-    totalPedidos: s.qty
-  }));
-
-  return result.sort((a, b) => b.totalFaturado - a.totalFaturado);
-};
 /**
  * Busca estatísticas do dashboard filtradas por CIDADE (Agregação Manual)
  */
@@ -952,7 +916,9 @@ export const fetchDashboardStatsByCity = async (
   city: string,
   uf: string,
   centroCusto: string | null = null,
-  representative: string | null = null
+  representative: string[] = [],
+  cliente: string[] = [],
+  produto: string[] = []
 ): Promise<Partial<DashboardComercialData>> => {
   try {
     const formattedStartDate = format(startDate, 'yyyy-MM-dd 00:00:00');
@@ -1022,14 +988,14 @@ export const fetchDashboardStatsByCity = async (
     if (centroCusto && centroCusto !== "none") {
       invoiceQuery = invoiceQuery.eq('centrocusto', centroCusto);
     }
-    if (representative && representative !== "none") {
-      invoiceQuery = invoiceQuery.eq('representante', representative);
+    if (representative && representative.length > 0) {
+      invoiceQuery = invoiceQuery.in('representante', representative);
     }
 
     // B. Fetch Orders (Pedidos)
     let orderQuery = supabase
       .from('BLUEBAY_PEDIDO')
-      .select('TOTAL_PRODUTO, DATA_PEDIDO, CENTROCUSTO, REPRESENTANTE, QTDE_PEDIDA, VALOR_UNITARIO, QTDE_ENTREGUE, STATUS, PES_CODIGO')
+      .select('TOTAL_PRODUTO, DATA_PEDIDO, CENTROCUSTO, REPRESENTANTE, QTDE_PEDIDA, VALOR_UNITARIO, QTDE_ENTREGUE, STATUS, PES_CODIGO, ITEM_CODIGO')
       .gte('DATA_PEDIDO', formattedStartDate)
       .lte('DATA_PEDIDO', formattedEndDate)
       .neq('STATUS', '4') // Not Cancelled
@@ -1038,8 +1004,16 @@ export const fetchDashboardStatsByCity = async (
     if (centroCusto && centroCusto !== "none") {
       orderQuery = orderQuery.eq('CENTROCUSTO', centroCusto);
     }
-    if (representative && representative !== "none") {
-      orderQuery = orderQuery.eq('REPRESENTANTE', representative);
+    if (representative && representative.length > 0) {
+      orderQuery = orderQuery.in('REPRESENTANTE', representative);
+    }
+    if (cliente && cliente.length > 0) {
+      invoiceQuery = invoiceQuery.in('pes_codigo', cliente);
+      orderQuery = orderQuery.in('PES_CODIGO', cliente);
+    }
+    if (produto && produto.length > 0) {
+      // invoiceQuery = invoiceQuery.eq('item_codigo', produto); // View may not support item_codigo
+      orderQuery = orderQuery.in('ITEM_CODIGO', produto);
     }
 
     const [invoiceRes, orderRes] = await Promise.all([invoiceQuery, orderQuery]);
@@ -1238,13 +1212,15 @@ export const fetchClientStats = async (
   startDate: Date,
   endDate: Date,
   centroCusto: string | null = null,
-  representative: string | null = null
+  representative: string[] = [],
+  cliente: string[] = [],
+  produto: string[] = []
 ): Promise<import("./dashboardComercialTypes").ClientStat[]> => {
   try {
     const formattedStartDate = format(startDate, 'yyyy-MM-dd 00:00:00');
     const formattedEndDate = format(endDate, 'yyyy-MM-dd 23:59:59');
 
-    console.log(`[SERVICE] Buscando Stats de Clientes: ${formattedStartDate} até ${formattedEndDate} (CC: ${centroCusto}, Rep: ${representative})`);
+    console.log(`[SERVICE] Buscando Stats de Clientes: ${formattedStartDate} até ${formattedEndDate}`);
 
     const pageSize = 1000;
     const maxRows = 50000;
@@ -1272,13 +1248,25 @@ export const fetchClientStats = async (
         query = query.is('centrocusto', null);
       }
 
-      if (representative && representative !== "none") {
-        if (String(representative) === '0' || representative === 'Não identificado') {
-          query = query.is('representante', null);
-        } else {
-          query = query.eq('representante', representative);
-        }
+      // Filter empty strings to avoid integer syntax errors
+      const validReps = representative ? representative.filter(r => r && r.trim() !== "") : [];
+      if (validReps.length > 0) {
+        query = query.in('representante', validReps);
       }
+
+      const validClients = cliente ? cliente.filter(c => c && c.trim() !== "") : [];
+      if (validClients.length > 0) {
+        query = query.in('pes_codigo', validClients);
+      }
+
+
+      // Invoice view usually doesn't have item_codigo?
+      // Step 268 lines 1729 showed logic for Manual Calc.
+      // If invoice doesn't have item_codigo, we can't filter invoice by product.
+      // So ignore product for invoices, or use a better view.
+      // We will ignore for now as per `calcDashboardStats` logic?
+      // Actually `calcDashboardStats` (Step 271) REMOVED product filter from Invoice Query.
+      // So here too.
 
       const { data: chunk, error } = await query;
       if (error) throw error;
@@ -1314,12 +1302,19 @@ export const fetchClientStats = async (
         query = query.is('CENTROCUSTO', null);
       }
 
-      if (representative && representative !== "none") {
-        if (String(representative) === '0' || representative === 'Não identificado') {
-          query = query.is('REPRESENTANTE', null);
-        } else {
-          query = query.eq('REPRESENTANTE', representative);
-        }
+      const validReps = representative ? representative.filter(r => r && r.trim() !== "") : [];
+      if (validReps.length > 0) {
+        query = query.in('REPRESENTANTE', validReps);
+      }
+
+      const validClients = cliente ? cliente.filter(c => c && c.trim() !== "") : [];
+      if (validClients.length > 0) {
+        query = query.in('PES_CODIGO', validClients);
+      }
+
+      const validProducts = produto ? produto.filter(p => p && p.trim() !== "") : [];
+      if (validProducts.length > 0) {
+        query = query.in('ITEM_CODIGO', validProducts);
       }
 
       const { data: chunk, error } = await query;
@@ -1431,4 +1426,630 @@ export const fetchClientStats = async (
     console.error('[SERVICE] Error fetching client stats:', error);
     return [];
   }
+};
+
+/**
+ * Funções auxiliares para os filtros
+ */
+// Helper to get active Pessoas IDs in range
+export const getActivePessoaIds = async (startDate: Date, endDate: Date, isRep: boolean): Promise<Set<string>> => {
+  const formattedStart = format(startDate, 'yyyy-MM-dd 00:00:00');
+  const formattedEnd = format(endDate, 'yyyy-MM-dd 23:59:59');
+
+  const ids = new Set<string>();
+  const PAGE_SIZE = 1000;
+
+  // 1. Invoices Loop
+  let invHasMore = true;
+  let invPage = 0;
+  while (invHasMore) {
+    const { data: invData, error } = await supabase
+      .from('MV_BLUEBAY_FATURAMENTO_CENTRO_CUSTO')
+      .select(isRep ? 'representante' : 'pes_codigo')
+      .gte('data_emissao', formattedStart)
+      .lte('data_emissao', formattedEnd)
+      .neq('status_faturamento', '2')
+      .range(invPage * PAGE_SIZE, (invPage + 1) * PAGE_SIZE - 1);
+
+    if (error) {
+      console.error('[SERVICE] Error fetching active ids (invoice):', error);
+      break;
+    }
+
+    if (invData && invData.length > 0) {
+      invData.forEach((r: any) => {
+        const val = isRep ? r.representante : r.pes_codigo;
+        if (val && String(val) !== '0') ids.add(String(val));
+      });
+      invHasMore = invData.length === PAGE_SIZE;
+      invPage++;
+    } else {
+      invHasMore = false;
+    }
+  }
+
+  // 2. Orders Loop
+  let ordHasMore = true;
+  let ordPage = 0;
+  while (ordHasMore) {
+    const { data: ordData, error } = await supabase
+      .from('BLUEBAY_PEDIDO')
+      .select(isRep ? 'REPRESENTANTE' : 'PES_CODIGO')
+      .gte('DATA_PEDIDO', formattedStart)
+      .lte('DATA_PEDIDO', formattedEnd)
+      .neq('STATUS', '4')
+      .range(ordPage * PAGE_SIZE, (ordPage + 1) * PAGE_SIZE - 1);
+
+    if (error) {
+      console.error('[SERVICE] Error fetching active ids (order):', error);
+      break;
+    }
+
+    if (ordData && ordData.length > 0) {
+      ordData.forEach((r: any) => {
+        const val = isRep ? r.REPRESENTANTE : r.PES_CODIGO;
+        if (val && String(val) !== '0') ids.add(String(val));
+      });
+      ordHasMore = ordData.length === PAGE_SIZE;
+      ordPage++;
+    } else {
+      ordHasMore = false;
+    }
+  }
+
+  return ids;
+};
+
+export const fetchRepresentativesOptions = async (allowedIds?: string[]) => {
+  let query = supabase
+    .from('BLUEBAY_PESSOA')
+    .select('PES_CODIGO, APELIDO')
+    .not('APELIDO', 'is', null)
+    .neq('APELIDO', '')
+    .order('APELIDO');
+
+  if (allowedIds && allowedIds.length > 0) {
+    // Optimization: Directly filter by IDs in the query
+    query = query.in('PES_CODIGO', allowedIds);
+  } else if (allowedIds && allowedIds.length === 0) {
+    // If an empty allow-list is provided, return nothing (strict filtering)
+    return [];
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Erro ao buscar representantes:', error);
+    return [];
+  }
+
+  return (data || []).map(r => ({
+    value: String(r.PES_CODIGO),
+    label: r.APELIDO ? r.APELIDO.trim() : `Rep ${r.PES_CODIGO}`
+  }));
+};
+
+export const searchClients = async (query: string, allowedIds?: string[]) => {
+  if (!query || query.length < 2) return [];
+
+  // First find matching people by name
+  let nameQuery = supabase
+    .from('BLUEBAY_PESSOA')
+    .select('PES_CODIGO, APELIDO, RAZAOSOCIAL')
+    .or(`APELIDO.ilike.%${query}%,RAZAOSOCIAL.ilike.%${query}%`);
+  // .limit(50); // REMOVE LIMIT if filtering by ID to ensure we find the match!
+  // Or keep limit but apply ID filter IN THE QUERY.
+
+  if (allowedIds && allowedIds.length > 0) {
+    nameQuery = nameQuery.in('PES_CODIGO', allowedIds);
+  } else if (allowedIds && allowedIds.length === 0) {
+    // Strict filtering and no allowed IDs -> no results
+    return [];
+  }
+
+  // Apply limit after filter to keep it safe (though Supabase might require limit)
+  nameQuery = nameQuery.limit(50);
+
+  const { data: people, error } = await nameQuery;
+
+  if (error) {
+    console.error('Erro ao buscar clientes:', error);
+    return [];
+  }
+
+  if (!people || people.length === 0) return [];
+
+  return (people || []).map(d => {
+    const apelido = d.APELIDO ? d.APELIDO.trim() : '';
+    const razao = d.RAZAOSOCIAL ? d.RAZAOSOCIAL.trim() : '';
+    return {
+      value: String(d.PES_CODIGO),
+      label: apelido !== '' ? apelido : (razao !== '' ? razao : `Cliente ${d.PES_CODIGO}`)
+    };
+  });
+};
+
+export const searchProducts = async (query: string) => {
+  if (!query || query.length < 2) return [];
+
+  const { data, error } = await supabase
+    .from('BLUEBAY_ITEM')
+    .select('ITEM_CODIGO, DESCRICAO')
+    .or(`ITEM_CODIGO.ilike.%${query}%,DESCRICAO.ilike.%${query}%`)
+    .limit(50);
+
+  if (error) {
+    console.error('Erro ao buscar produtos:', error);
+    return [];
+  }
+
+  return (data || []).map(p => ({
+    value: String(p.ITEM_CODIGO),
+    label: `${p.ITEM_CODIGO} - ${p.DESCRICAO}`
+  }));
+};
+
+// Calculates Dashboard Stats manually (Client-side aggregation)
+export const calcDashboardStatsManual = async (
+  startDate: Date,
+  endDate: Date,
+  centroCusto: string | null = null,
+  representative: string[] = [],
+  cliente: string[] = [],
+  produto: string[] = []
+): Promise<Partial<DashboardComercialData>> => {
+  try {
+    const formattedStartDate = format(startDate, 'yyyy-MM-dd 00:00:00');
+    const formattedEndDate = format(endDate, 'yyyy-MM-dd 23:59:59');
+
+    console.log(`[SERVICE] Calc Manual Stats: ${formattedStartDate} to ${formattedEndDate}`);
+
+    // Fetch RAW Data (Invoices & Orders)
+    let invoiceQuery = supabase
+      .from('MV_BLUEBAY_FATURAMENTO_CENTRO_CUSTO')
+      .select('data_emissao, valor_nota, quantidade, centrocusto, representante, pes_codigo, nota, item_codigo')
+      .gte('data_emissao', formattedStartDate)
+      .lte('data_emissao', formattedEndDate)
+      .neq('status_faturamento', '2'); // Not Cancelled
+
+    let orderQuery = supabase
+      .from('BLUEBAY_PEDIDO')
+      .select('DATA_PEDIDO, TOTAL_PRODUTO, QTDE_PEDIDA, VALOR_UNITARIO, CENTROCUSTO, REPRESENTANTE, STATUS, PES_CODIGO, ITEM_CODIGO, PED_NUMPEDIDO')
+      .gte('DATA_PEDIDO', formattedStartDate)
+      .lte('DATA_PEDIDO', formattedEndDate)
+      .neq('STATUS', '4'); // Not Cancelled
+
+    // Apply Filters
+    if (centroCusto && centroCusto !== "none" && centroCusto !== "Não identificado") {
+      invoiceQuery = invoiceQuery.eq('centrocusto', centroCusto);
+      orderQuery = orderQuery.eq('CENTROCUSTO', centroCusto);
+    }
+
+    if (representative && representative.length > 0) {
+      invoiceQuery = invoiceQuery.in('representante', representative);
+      orderQuery = orderQuery.in('REPRESENTANTE', representative);
+    }
+
+    if (cliente && cliente.length > 0) {
+      invoiceQuery = invoiceQuery.in('pes_codigo', cliente);
+      orderQuery = orderQuery.in('PES_CODIGO', cliente);
+    }
+
+    if (produto && produto.length > 0) {
+      invoiceQuery = invoiceQuery.in('item_codigo', produto);
+      orderQuery = orderQuery.in('ITEM_CODIGO', produto);
+    }
+
+    const [invoiceRes, orderRes] = await Promise.all([invoiceQuery, orderQuery]);
+
+    if (invoiceRes.error) throw invoiceRes.error;
+    if (orderRes.error) throw orderRes.error;
+
+    const invoices = invoiceRes.data || [];
+    const orders = orderRes.data || [];
+
+    // 2. Aggregate Data
+
+    // Totals
+    let totalFaturado = 0;
+    let totalItens = 0;
+    let totalPedidosValue = 0;
+    const globalOrderIds = new Set<string>();
+    orders.forEach((o: any) => { if (o.PED_NUMPEDIDO) globalOrderIds.add(o.PED_NUMPEDIDO); });
+    let totalPedidosQty = globalOrderIds.size;
+
+    // Maps
+    const dailyMap = new Map<string, { total: number, faturamentoCount: number, pedidoTotal: number, pedidoCount: number }>();
+    const dailyOrderIds = new Map<string, Set<string>>(); // Track unique order IDs per day
+    const dailyInvoiceIds = new Map<string, Set<string>>(); // Track unique invoice IDs per day
+    const ccMap = new Map<string, any>();
+    const ccOrderIds = new Map<string, Set<string>>(); // Track unique order IDs per cost center
+    const ccInvoiceIds = new Map<string, Set<string>>(); // Track unique invoice IDs per cost center
+    const repMap = new Map<string, any>();
+    const repOrderIds = new Map<string, Set<string>>(); // Track unique order IDs per representative
+    const repInvoiceIds = new Map<string, Set<string>>(); // Track unique invoice IDs per representative
+    const repIds = new Set<string>();
+
+    // --- Process Invoices ---
+    invoices.forEach((inv: any) => {
+      const valor = Number(inv.valor_nota) || 0;
+      const qtde = Number(inv.quantidade) || 0;
+
+      totalFaturado += valor;
+      totalItens += qtde;
+
+      // Daily
+      const dateKey = inv.data_emissao ? inv.data_emissao.split('T')[0] : 'Unknown';
+      if (!dailyMap.has(dateKey)) {
+        dailyMap.set(dateKey, { total: 0, faturamentoCount: 0, pedidoTotal: 0, pedidoCount: 0 });
+      }
+      const day = dailyMap.get(dateKey)!;
+      day.total += valor;
+      day.faturamentoCount += 1;
+
+      // Cost Center
+      const ccKey = inv.centrocusto || 'Não identificado';
+      if (!ccMap.has(ccKey)) {
+        ccMap.set(ccKey, {
+          nome: ccKey,
+          totalFaturado: 0, totalItensFaturados: 0, totalPedidos: 0, totalItensPedidos: 0
+        });
+      }
+      const cc = ccMap.get(ccKey);
+      cc.totalFaturado += valor;
+      cc.totalItensFaturados += qtde;
+
+      // Representative
+      const repKey = inv.representante ? String(inv.representante) : '0';
+      repIds.add(repKey);
+      if (!repMap.has(repKey)) {
+        repMap.set(repKey, {
+          id: repKey, nome: 'Loading...',
+          totalFaturado: 0, totalItensFaturados: 0, totalPedidos: 0, totalItensPedidos: 0
+        });
+      }
+      const rep = repMap.get(repKey);
+      rep.totalFaturado += valor;
+      rep.totalItensFaturados += qtde;
+    });
+
+    // --- Process Orders ---
+    orders.forEach((order: any) => {
+      const qtdePedida = Number(order.QTDE_PEDIDA) || 0;
+      const valorUnit = Number(order.VALOR_UNITARIO) || 0;
+      const valorPedido = qtdePedida * valorUnit;
+      const totalProd = Number(order.TOTAL_PRODUTO) || 0;
+
+      // Fix: If filtering by product, force calculation Qty * Unit as requested
+      // Otherwise prefer totalProd if available
+      const finalOrderValue = (produto && produto !== "none")
+        ? valorPedido
+        : (totalProd > 0 ? totalProd : valorPedido);
+
+      totalPedidosValue += finalOrderValue;
+
+      // Daily
+      const dateKey = order.DATA_PEDIDO ? order.DATA_PEDIDO.split('T')[0] : 'Unknown';
+      if (!dailyMap.has(dateKey)) {
+        dailyMap.set(dateKey, { total: 0, faturamentoCount: 0, pedidoTotal: 0, pedidoCount: 0 });
+      }
+      const day = dailyMap.get(dateKey)!;
+      day.pedidoTotal += finalOrderValue;
+
+      // Unique Order Count for Daily
+      if (!dailyOrderIds.has(dateKey)) dailyOrderIds.set(dateKey, new Set());
+      const dayOrders = dailyOrderIds.get(dateKey)!;
+      if (order.PED_NUMPEDIDO && !dayOrders.has(order.PED_NUMPEDIDO)) {
+        dayOrders.add(order.PED_NUMPEDIDO);
+        day.pedidoCount += 1;
+      }
+
+      // Cost Center
+      const ccKey = order.CENTROCUSTO || 'Não identificado';
+      if (!ccMap.has(ccKey)) {
+        ccMap.set(ccKey, {
+          nome: ccKey,
+          totalFaturado: 0, totalItensFaturados: 0, totalPedidos: 0, totalItensPedidos: 0
+        });
+      }
+      const cc = ccMap.get(ccKey);
+      cc.totalPedidos += finalOrderValue; // Store VALUE, not count
+      cc.totalItensPedidos += qtdePedida;
+
+      // Unique Order Count for Cost Center
+      if (!ccOrderIds.has(ccKey)) ccOrderIds.set(ccKey, new Set());
+      const ccOrders = ccOrderIds.get(ccKey)!;
+      if (order.PED_NUMPEDIDO && !ccOrders.has(order.PED_NUMPEDIDO)) {
+        ccOrders.add(order.PED_NUMPEDIDO);
+        cc.totalPedidosCount = (cc.totalPedidosCount || 0) + 1;
+      }
+
+      // Representative
+      const repKey = order.REPRESENTANTE ? String(order.REPRESENTANTE) : '0';
+      repIds.add(repKey);
+      if (!repMap.has(repKey)) {
+        repMap.set(repKey, {
+          id: repKey, nome: 'Loading...',
+          totalFaturado: 0, totalItensFaturados: 0, totalPedidos: 0, totalItensPedidos: 0
+        });
+      }
+      const rep = repMap.get(repKey);
+      rep.totalPedidos += finalOrderValue; // Store VALUE, not count
+      rep.totalItensPedidos += qtdePedida;
+
+      // Unique Order Count for Representative
+      if (!repOrderIds.has(repKey)) repOrderIds.set(repKey, new Set());
+      const repOrders = repOrderIds.get(repKey)!;
+      if (order.PED_NUMPEDIDO && !repOrders.has(order.PED_NUMPEDIDO)) {
+        repOrders.add(order.PED_NUMPEDIDO);
+        rep.totalPedidosCount = (rep.totalPedidosCount || 0) + 1;
+      }
+    });
+
+    // Formatting Daily
+    const dailyFaturamento = Array.from(dailyMap.entries()).map(([date, stats]) => ({
+      date: date,
+      formattedDate: format(parseISO(date), 'dd/MM/yyyy'),
+      ...stats
+    })).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+
+    // Formatting Cost Centers
+    const costCenterStats = Array.from(ccMap.values()).map(cc => ({
+      ...cc,
+      totalPedidos: cc.totalPedidos, // Now shows VALUE as requested
+      valorPedidos: cc.totalPedidos,
+      // Actually dashboard uses totalPedidos as count in table headers
+      ticketMedioFaturado: cc.totalItensFaturados > 0 ? cc.totalFaturado / cc.totalItensFaturados : 0
+    })).sort((a, b) => b.totalFaturado - a.totalFaturado);
+
+    // Fetch Rep Names
+    if (repIds.size > 0) {
+      const { data: reps } = await supabase
+        .from('BLUEBAY_PESSOA')
+        .select('PES_CODIGO, APELIDO')
+        .in('PES_CODIGO', Array.from(repIds));
+
+      if (reps) {
+        reps.forEach((r: any) => {
+          const k = String(r.PES_CODIGO);
+          if (repMap.has(k)) {
+            repMap.get(k).nome = r.APELIDO;
+          }
+        });
+      }
+    }
+
+    const representativeStats = Array.from(repMap.values()).map(r => ({
+      ...r,
+      totalPedidos: r.totalPedidos, // Now shows VALUE as requested
+      valorPedidos: r.totalPedidos,
+      ticketMedioFaturado: r.totalItensFaturados > 0 ? r.totalFaturado / r.totalItensFaturados : 0,
+      nome: r.id === '0' ? 'Não identificado' : (r.nome === 'Loading...' ? `Rep ${r.id}` : r.nome)
+    })).sort((a, b) => b.totalFaturado - a.totalFaturado); // Sort by Value
+
+    return {
+      dailyFaturamento,
+      monthlyFaturamento: [],
+      totalFaturado,
+      totalItens,
+      mediaValorItem: totalPedidosQty > 0 ? totalFaturado / totalPedidosQty : 0,
+      totals: {
+        totalFaturado,
+        totalItens,
+        mediaValorItem: totalPedidosQty > 0 ? totalFaturado / totalPedidosQty : 0,
+        totalPedidosValue,
+        totalPedidosQty
+      },
+      costCenterStats,
+      representativeStats,
+      dataRangeInfo: {
+        startDateRequested: format(startDate, 'yyyy-MM-dd'),
+        endDateRequested: format(endDate, 'yyyy-MM-dd'),
+        startDateActual: dailyFaturamento[0]?.date || null,
+        endDateActual: dailyFaturamento[dailyFaturamento.length - 1]?.date || null,
+        hasCompleteData: true
+      }
+    };
+
+  } catch (error) {
+    console.error('[SERVICE] Error calculating manual stats:', error);
+    throw error;
+  }
+}
+
+// Added fetchCityStatsV2 to support MultiSelect filters and Order Values
+export const fetchCityStatsV2 = async (
+  startDate: string,
+  endDate: string,
+  filters: {
+    centroCusto: string | null;
+    representative: string[];
+    cliente: string[];
+    produto: string[];
+  }
+): Promise<import("./dashboardComercialTypes").CitySalesStat[]> => {
+  const { centroCusto, representative, cliente, produto } = filters;
+  const start = `${startDate} 00:00:00`;
+  const end = `${endDate} 23:59:59`;
+  const PAGE_SIZE = 1000;
+  const maxRows = 200000; // Safety limit
+
+  console.log(`[CITY_STATS] Fetching data with pagination (Max ${maxRows} rows)...`);
+
+  // 1. Fetch Invoices (Faturamento) with Pagination
+  let allInvoices: any[] = [];
+  let hasMoreInvoices = true;
+  let invPage = 0;
+
+  while (hasMoreInvoices && allInvoices.length < maxRows) {
+    let invoiceQuery = supabase
+      .from('MV_BLUEBAY_FATURAMENTO_CENTRO_CUSTO')
+      .select('pes_codigo, valor_nota')
+      .gte('data_emissao', start)
+      .lte('data_emissao', end)
+      .neq('status_faturamento', '2')
+      .range(invPage * PAGE_SIZE, (invPage + 1) * PAGE_SIZE - 1);
+
+    // Apply Filters to Invoice Query
+    if (centroCusto && centroCusto !== "none") {
+      if (centroCusto === "Não identificado") {
+        invoiceQuery = invoiceQuery.is('centrocusto', null);
+      } else {
+        invoiceQuery = invoiceQuery.eq('centrocusto', centroCusto);
+      }
+    }
+    if (representative && representative.length > 0) invoiceQuery = invoiceQuery.in('representante', representative);
+    if (cliente && cliente.length > 0) invoiceQuery = invoiceQuery.in('pes_codigo', cliente);
+    // Note: invoice view might not have item_codigo support, usually ignored or needs check. 
+    if (produto && produto.length > 0) invoiceQuery = invoiceQuery.in('item_codigo', produto);
+
+    const { data: chunk, error } = await invoiceQuery;
+    if (error) {
+      console.error('[CITY_STATS] Error fetching invoices page ' + invPage, error);
+      break;
+    }
+
+    if (chunk && chunk.length > 0) {
+      allInvoices = [...allInvoices, ...chunk];
+      hasMoreInvoices = chunk.length === PAGE_SIZE;
+      invPage++;
+    } else {
+      hasMoreInvoices = false;
+    }
+  }
+
+  // 1b. Fetch Orders (Pedidos) with Pagination
+  let allOrders: any[] = [];
+  let hasMoreOrders = true;
+  let ordPage = 0;
+
+  while (hasMoreOrders && allOrders.length < maxRows) {
+    let orderQuery = supabase
+      .from('BLUEBAY_PEDIDO')
+      .select('PES_CODIGO, TOTAL_PRODUTO, QTDE_PEDIDA, VALOR_UNITARIO, PED_NUMPEDIDO, DATA_PEDIDO')
+      .gte('DATA_PEDIDO', start)
+      .lte('DATA_PEDIDO', end)
+      .neq('STATUS', '4')
+      .range(ordPage * PAGE_SIZE, (ordPage + 1) * PAGE_SIZE - 1);
+
+    // Apply Filters to Order Query
+    if (centroCusto && centroCusto !== "none") {
+      if (centroCusto === "Não identificado") {
+        orderQuery = orderQuery.is('CENTROCUSTO', null);
+      } else {
+        orderQuery = orderQuery.eq('CENTROCUSTO', centroCusto);
+      }
+    }
+    if (representative && representative.length > 0) orderQuery = orderQuery.in('REPRESENTANTE', representative);
+    if (cliente && cliente.length > 0) orderQuery = orderQuery.in('PES_CODIGO', cliente);
+    if (produto && produto.length > 0) orderQuery = orderQuery.in('ITEM_CODIGO', produto);
+
+    const { data: chunk, error } = await orderQuery;
+    if (error) {
+      console.error('[CITY_STATS] Error fetching orders page ' + ordPage, error);
+      break;
+    }
+
+    if (chunk && chunk.length > 0) {
+      allOrders = [...allOrders, ...chunk];
+      hasMoreOrders = chunk.length === PAGE_SIZE;
+      ordPage++;
+    } else {
+      hasMoreOrders = false;
+    }
+  }
+
+  const invoices = allInvoices;
+  const orders = allOrders;
+
+  if (invoices.length === 0 && orders.length === 0) return [];
+
+  // 2. Aggregate per Person
+  const personMap = new Map<number, { fatTotal: number, fatCount: number, pedTotal: number, pedCount: number, orderIds: Set<string> }>();
+
+  invoices.forEach((inv: any) => {
+    const pid = Number(inv.pes_codigo);
+    if (!pid) return;
+    const val = Number(inv.valor_nota || 0);
+    const curr = personMap.get(pid) || { fatTotal: 0, fatCount: 0, pedTotal: 0, pedCount: 0, orderIds: new Set() };
+    curr.fatTotal += val;
+    curr.fatCount += 1;
+    personMap.set(pid, curr);
+  });
+
+  orders.forEach((ord: any) => {
+    const pid = Number(ord.PES_CODIGO);
+    if (!pid) return;
+    const totalProd = Number(ord.TOTAL_PRODUTO) || 0;
+    const calcVal = (Number(ord.QTDE_PEDIDA) || 0) * (Number(ord.VALOR_UNITARIO) || 0);
+    const finalVal = totalProd > 0 ? totalProd : calcVal;
+
+    const curr = personMap.get(pid) || { fatTotal: 0, fatCount: 0, pedTotal: 0, pedCount: 0, orderIds: new Set() };
+    curr.pedTotal += finalVal;
+
+    const orderId = ord.PED_NUMPEDIDO ? String(ord.PED_NUMPEDIDO) : null;
+    if (orderId && !curr.orderIds.has(orderId)) {
+      curr.orderIds.add(orderId);
+      curr.pedCount += 1;
+    } else if (!orderId) {
+      curr.pedCount += 1;
+    }
+
+    personMap.set(pid, curr);
+  });
+
+  const uniquePersonIds = Array.from(personMap.keys());
+
+  // 3. Fetch City/UF from BLUEBAY_PESSOA
+  const citiesMap = new Map<number, { city: string, uf: string }>();
+  if (uniquePersonIds.length > 0) {
+    const chunkSize = 1000;
+    for (let i = 0; i < uniquePersonIds.length; i += chunkSize) {
+      const chunk = uniquePersonIds.slice(i, i + chunkSize);
+      const { data: people } = await supabase
+        .from('BLUEBAY_PESSOA')
+        .select('PES_CODIGO, CIDADE, UF')
+        .in('PES_CODIGO', chunk);
+
+      if (people) {
+        people.forEach((p: any) => {
+          if (p.CIDADE) {
+            citiesMap.set(Number(p.PES_CODIGO), { city: p.CIDADE, uf: p.UF || '' });
+          }
+        });
+      }
+    }
+  }
+
+  // 4. Aggregate by City
+  const cityAggMap = new Map<string, any>();
+
+  personMap.forEach((stats, pid) => {
+    const cityInfo = citiesMap.get(pid);
+    const cityKey = cityInfo ? `${cityInfo.city}-${cityInfo.uf}` : 'Indefinido-';
+    const cityName = cityInfo ? cityInfo.city : 'Indefinido';
+    const cityUf = cityInfo ? cityInfo.uf : '';
+
+    if (!cityAggMap.has(cityKey)) {
+      cityAggMap.set(cityKey, {
+        city: cityName, uf: cityUf,
+        totalFaturado: 0, totalFaturadoCount: 0,
+        totalPedidosValue: 0, totalPedidosCount: 0
+      });
+    }
+    const c = cityAggMap.get(cityKey);
+    c.totalFaturado += stats.fatTotal;
+    c.totalFaturadoCount += stats.fatCount;
+    c.totalPedidosValue += stats.pedTotal;
+    c.totalPedidosCount += stats.pedCount;
+  });
+
+  return Array.from(cityAggMap.values()).map(c => ({
+    city: c.city,
+    uf: c.uf,
+    totalFaturado: c.totalFaturado,
+    totalFaturadoCount: c.totalFaturadoCount,
+    totalPedidosValue: c.totalPedidosValue,
+    totalPedidosCount: c.totalPedidosCount
+  })).sort((a, b) => b.totalFaturado - a.totalFaturado);
 };
