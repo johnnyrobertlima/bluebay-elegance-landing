@@ -11,13 +11,14 @@ import {
     TrendingDown,
     LayoutGrid,
     BarChart4,
-    Wallet,
-    Settings,
     Moon,
     Sun,
     ShoppingBag,
-    DollarSign
+    DollarSign,
+    Package,
+    Shield
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import {
     AreaChart,
     Area,
@@ -30,6 +31,7 @@ import { format, subDays, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const BluebayAdmDashboardDiretoria = () => {
+    const navigate = useNavigate();
     const {
         dashboardData,
         isLoading,
@@ -400,69 +402,82 @@ const BluebayAdmDashboardDiretoria = () => {
                                                 <h4 className="font-extrabold text-lg text-slate-900 dark:text-white">{cc.nome}</h4>
                                                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                                                     {/* Tagline logic - Hardcoded for known CCs, or generic */}
-                                                    {cc.nome.includes("BLUE BAY") ? "Varejo & Serviços" :
-                                                        cc.nome.includes("JAB") ? "Indústria & Logística" :
-                                                            cc.nome.includes("BK") ? "Holding Financeira" : "Centro de Custo"}
+                                                    {cc.nome.includes("BLUE BAY") ? "ATACADO DE CONFECÇÕES" :
+                                                        cc.nome.includes("JAB") ? "JUST ANOTHER BRAND" :
+                                                            cc.nome.includes("BK") ? "ARTIGOS DE ARMARINHO" : "Centro de Custo"}
                                                 </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-8 relative z-10">
-                                            <div className="space-y-1">
-                                                <div className="flex items-center space-x-2">
-                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Faturado</p>
-                                                    <div className={`flex items-center text-[10px] font-bold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
-                                                        {isPositive ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
-                                                        <span>{Math.abs(variation).toFixed(1)}%</span>
-                                                    </div>
-                                                </div>
-                                                <p className="font-extrabold text-xl text-slate-900 dark:text-white truncate">
-                                                    {new Intl.NumberFormat('pt-BR', { notation: "compact", maximumFractionDigits: 1 }).format(cc.totalFaturado)}
-                                                </p>
-                                                <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full mt-2">
-                                                    <div className={`h-full ${style.barColor} rounded-full opacity-80`} style={{ width: `${fatPercent}%` }}></div>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <div className="flex items-center space-x-2">
-                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Pedidos</p>
-                                                    <div className={`flex items-center text-[10px] font-bold ${isPositivePed ? 'text-emerald-500' : 'text-red-500'}`}>
-                                                        {isPositivePed ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
-                                                        <span>{Math.abs(variationPed).toFixed(1)}%</span>
-                                                    </div>
-                                                </div>
-                                                <p className="font-extrabold text-xl text-slate-900 dark:text-white truncate">
-                                                    {new Intl.NumberFormat('pt-BR', { notation: "compact", maximumFractionDigits: 1 }).format(cc.totalPedidos)}
-                                                </p>
-                                                <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full mt-2">
-                                                    <div className="h-full bg-emerald-500 rounded-full opacity-80" style={{ width: `${pedPercent}%` }}></div>
-                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    );
-                        })}
+
+                                    <div className="grid grid-cols-2 gap-8 relative z-10">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center space-x-2">
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Faturado</p>
+                                                <div className={`flex items-center text-[10px] font-bold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                    {isPositive ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
+                                                    <span>{Math.abs(variation).toFixed(1)}%</span>
+                                                </div>
+                                            </div>
+                                            <p className="font-extrabold text-xl text-slate-900 dark:text-white truncate">
+                                                {new Intl.NumberFormat('pt-BR', { notation: "compact", maximumFractionDigits: 1 }).format(cc.totalFaturado)}
+                                            </p>
+                                            <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full mt-2">
+                                                <div className={`h-full ${style.barColor} rounded-full opacity-80`} style={{ width: `${fatPercent}%` }}></div>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <div className="flex items-center space-x-2">
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Pedidos</p>
+                                                <div className={`flex items-center text-[10px] font-bold ${isPositivePed ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                    {isPositivePed ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
+                                                    <span>{Math.abs(variationPed).toFixed(1)}%</span>
+                                                </div>
+                                            </div>
+                                            <p className="font-extrabold text-xl text-slate-900 dark:text-white truncate">
+                                                {new Intl.NumberFormat('pt-BR', { notation: "compact", maximumFractionDigits: 1 }).format(cc.totalPedidos)}
+                                            </p>
+                                            <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full mt-2">
+                                                <div className="h-full bg-emerald-500 rounded-full opacity-80" style={{ width: `${pedPercent}%` }}></div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
+                            );
+                        })}
+                    </div>
                 </section>
             </main>
 
             {/* Bottom Nav */}
             <nav className="fixed bottom-0 left-0 right-0 h-24 bg-white/80 dark:bg-[#111827]/80 backdrop-blur-md border-t border-slate-200 dark:border-white/10 px-8 flex items-start justify-between pt-4 pb-6 z-50">
-                <button className="flex flex-col items-center space-y-1 text-indigo-500">
+                <button
+                    onClick={() => navigate('/client-area/bluebay_adm/dashboard_diretoria')}
+                    className="flex flex-col items-center space-y-1 text-indigo-500"
+                >
                     <LayoutGrid className="w-6 h-6 fill-current" />
                     <span className="text-[10px] font-bold">Início</span>
                 </button>
-                <button className="flex flex-col items-center space-y-1 text-slate-400 hover:text-indigo-400 transition-colors">
+                <button
+                    onClick={() => navigate('/client-area/bluebay_adm/dashboard_comercial')}
+                    className="flex flex-col items-center space-y-1 text-slate-400 hover:text-indigo-400 transition-colors"
+                >
                     <BarChart4 className="w-6 h-6" />
                     <span className="text-[10px] font-bold uppercase tracking-tighter">Dados</span>
                 </button>
-                <button className="flex flex-col items-center space-y-1 text-slate-400 hover:text-indigo-400 transition-colors">
-                    <Wallet className="w-6 h-6" />
-                    <span className="text-[10px] font-bold uppercase tracking-tighter">Caixa</span>
+                <button
+                    onClick={() => navigate('/client-area/bluebay_adm/estoque')}
+                    className="flex flex-col items-center space-y-1 text-slate-400 hover:text-indigo-400 transition-colors"
+                >
+                    <Package className="w-6 h-6" />
+                    <span className="text-[10px] font-bold uppercase tracking-tighter">Estoque</span>
                 </button>
-                <button className="flex flex-col items-center space-y-1 text-slate-400 hover:text-indigo-400 transition-colors">
-                    <Settings className="w-6 h-6" />
-                    <span className="text-[10px] font-bold uppercase tracking-tighter">Ajustes</span>
+                <button
+                    onClick={() => navigate('/client-area/bluebay_adm')}
+                    className="flex flex-col items-center space-y-1 text-slate-400 hover:text-indigo-400 transition-colors"
+                >
+                    <Shield className="w-6 h-6" />
+                    <span className="text-[10px] font-bold uppercase tracking-tighter">Admin</span>
                 </button>
             </nav>
 
