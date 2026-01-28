@@ -179,6 +179,45 @@ export const useDashboardComercial = (): UseDashboardComercialReturn => {
         );
       }
 
+      // --- Comparison Logic (Previous Period) ---
+      let comparisonStats = null;
+      try {
+        const duration = endDate.getTime() - startDate.getTime();
+        const previousEndDate = new Date(startDate.getTime() - 24 * 60 * 60 * 1000); // Day before start
+        const previousStartDate = new Date(previousEndDate.getTime() - duration);
+
+        console.log(`[HOOK] Buscando Comparação: ${previousStartDate.toISOString()} até ${previousEndDate.toISOString()}`);
+
+        if (selectedCity) {
+          const { fetchDashboardStatsByCity } = await import('@/services/bluebay/dashboardComercialService');
+          comparisonStats = await fetchDashboardStatsByCity(
+            previousStartDate,
+            previousEndDate,
+            selectedCity.city,
+            selectedCity.uf,
+            selectedCentroCusto,
+            selectedRepresentative,
+            selectedClient,
+            selectedProduct
+          );
+        } else {
+          // Reuse fetchDashboardStats logic but minimal if possible (RPC fetches all, but it is fast)
+          comparisonStats = await fetchDashboardStats(
+            previousStartDate,
+            previousEndDate,
+            selectedCentroCusto,
+            selectedRepresentative,
+            selectedClient,
+            selectedProduct,
+            signal
+          );
+        }
+      } catch (compErr) {
+        console.warn('[HOOK] Erro ao buscar dados de comparação:', compErr);
+        // Do not fail main request
+      }
+      // ------------------------------------------
+
       if (signal.aborted) return;
       if (!isMountedRef.current) return;
 
@@ -192,7 +231,11 @@ export const useDashboardComercial = (): UseDashboardComercialReturn => {
         pedidoItems: [],
         costCenterStats: stats.costCenterStats,
         representativeStats: stats.representativeStats,
-        dataRangeInfo: stats.dataRangeInfo || defaultData.dataRangeInfo
+        dataRangeInfo: stats.dataRangeInfo || defaultData.dataRangeInfo,
+        comparisonTotals: comparisonStats ? {
+          ...comparisonStats.totals,
+          costCenters: comparisonStats.costCenterStats
+        } : undefined
       };
 
       setDashboardData(statsData);

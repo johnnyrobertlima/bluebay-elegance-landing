@@ -155,6 +155,7 @@ export interface DashboardComercialData {
   costCenterStats?: DashboardComercialStats['costCenters']; // Added for staged loading
   representativeStats?: DashboardComercialStats['representativeStats']; // Added
   totals?: DashboardComercialStats['totals']; // Added
+  comparisonTotals?: DashboardComercialStats['totals'] & { costCenters?: DashboardComercialStats['costCenters'] }; // Added for comparison
   dataRangeInfo: {
     startDateRequested: string;
     endDateRequested: string;

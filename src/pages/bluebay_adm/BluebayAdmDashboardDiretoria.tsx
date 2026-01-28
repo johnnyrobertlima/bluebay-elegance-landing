@@ -169,6 +169,34 @@ const BluebayAdmDashboardDiretoria = () => {
 
     const costCenters = dashboardData?.costCenterStats || [];
 
+    // Variation Logic using comparisonTotals
+    const getVariation = (current: number, previous: number) => {
+        if (!previous || previous === 0) return 0;
+        return ((current - previous) / previous) * 100;
+    };
+
+    const formatVariation = (value: number) => {
+        const isPositive = value >= 0;
+        const formatted = Math.abs(value).toFixed(1);
+        const Icon = isPositive ? TrendingUp : TrendingDown;
+        const colorClass = isPositive ? 'text-emerald-500' : 'text-red-500';
+
+        return (
+            <div className={`mt-2 flex items-center text-[10px] font-bold ${colorClass}`}>
+                <Icon className="w-3 h-3 mr-1" />
+                <span>{isPositive ? '+' : '-'}{formatted}%</span>
+            </div>
+        );
+    };
+
+    // Calculate variations
+    const comparisonTotals = dashboardData?.comparisonTotals;
+    const previousFaturado = comparisonTotals?.totalFaturado || 0;
+    const previousPedidos = comparisonTotals?.totalPedidosValue || 0;
+
+    const variationFaturado = getVariation(totals.totalFaturado, previousFaturado);
+    const variationPedidos = getVariation(totals.totalPedidosValue, previousPedidos);
+
     return (
         <div className={`min-h-screen bg-slate-50 dark:bg-[#070a13] text-slate-900 dark:text-slate-100 pb-24 font-sans transition-colors duration-300 ${darkMode ? 'dark' : ''}`}>
             {/* Header */}
@@ -238,11 +266,7 @@ const BluebayAdmDashboardDiretoria = () => {
                                 {new Intl.NumberFormat('pt-BR', { notation: "compact", maximumFractionDigits: 1 }).format(totals.totalFaturado)}
                             </h2>
                         </div>
-                        {/* Dummy Trend - In real app, calculate diff */}
-                        <div className="mt-2 flex items-center text-[10px] font-bold text-emerald-500">
-                            <TrendingUp className="w-3 h-3 mr-1" /> {/* Placeholder trend */}
-                            <span>+12.5%</span>
-                        </div>
+                        {formatVariation(variationFaturado)}
                     </div>
 
                     {/* Pedidos Card */}
@@ -257,10 +281,7 @@ const BluebayAdmDashboardDiretoria = () => {
                                 {new Intl.NumberFormat('pt-BR', { notation: "compact", maximumFractionDigits: 1 }).format(totals.totalPedidosValue || 0)}
                             </h2>
                         </div>
-                        <div className="mt-2 flex items-center text-[10px] font-bold text-emerald-500">
-                            <TrendingUp className="w-3 h-3 mr-1" />
-                            <span>+8.2%</span>
-                        </div>
+                        {formatVariation(variationPedidos)}
                     </div>
                 </section>
 
@@ -354,6 +375,14 @@ const BluebayAdmDashboardDiretoria = () => {
                             const fatPercent = Math.round((cc.totalFaturado / maxFat) * 100);
                             const pedPercent = Math.round((cc.totalPedidos / maxPed) * 100);
 
+                            // Calculate Comparison
+                            const costCenterComparisons = comparisonTotals?.costCenters || [];
+                            const previousCC = costCenterComparisons.find(c => c.nome === cc.nome);
+                            // Compare Total Faturado for trend
+                            const compFat = previousCC?.totalFaturado || 0;
+                            const variation = getVariation(cc.totalFaturado, compFat);
+                            const isPositive = variation >= 0;
+
                             return (
                                 <div key={idx} className="bg-white dark:bg-[#111827] p-6 rounded-[2rem] border border-slate-200 dark:border-white/10 shadow-sm relative overflow-hidden group">
                                     <div className="flex justify-between items-start mb-6">
@@ -371,9 +400,9 @@ const BluebayAdmDashboardDiretoria = () => {
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center space-x-1 text-emerald-500 font-bold text-xs bg-emerald-500/10 px-2 py-1 rounded-lg">
-                                            <TrendingUp className="w-3 h-3" />
-                                            <span>{(Math.random() * 10).toFixed(1)}%</span> {/* Dummy Change */}
+                                        <div className={`flex items-center space-x-1 font-bold text-xs ${isPositive ? 'text-emerald-500 bg-emerald-500/10' : 'text-red-500 bg-red-500/10'} px-2 py-1 rounded-lg`}>
+                                            {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                                            <span>{isPositive ? '+' : ''}{variation.toFixed(1)}%</span>
                                         </div>
                                     </div>
 
