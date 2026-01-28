@@ -406,48 +406,43 @@ const BluebayAdmDashboardDiretoria = () => {
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className={`flex items-center space-x-1 font-bold text-xs ${isPositive ? 'text-emerald-500 bg-emerald-500/10' : 'text-red-500 bg-red-500/10'} px-2 py-1 rounded-lg`}>
-                                            {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                                            <span>{isPositive ? '+' : ''}{variation.toFixed(1)}%</span>
-                                        </div>
-                                    </div>
 
-                                    <div className="grid grid-cols-2 gap-8 relative z-10">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center space-x-2">
-                                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Faturado</p>
-                                                <div className={`flex items-center text-[10px] font-bold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
-                                                    {isPositive ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
-                                                    <span>{Math.abs(variation).toFixed(1)}%</span>
+                                        <div className="grid grid-cols-2 gap-8 relative z-10">
+                                            <div className="space-y-1">
+                                                <div className="flex items-center space-x-2">
+                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Faturado</p>
+                                                    <div className={`flex items-center text-[10px] font-bold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                        {isPositive ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
+                                                        <span>{Math.abs(variation).toFixed(1)}%</span>
+                                                    </div>
+                                                </div>
+                                                <p className="font-extrabold text-xl text-slate-900 dark:text-white truncate">
+                                                    {new Intl.NumberFormat('pt-BR', { notation: "compact", maximumFractionDigits: 1 }).format(cc.totalFaturado)}
+                                                </p>
+                                                <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full mt-2">
+                                                    <div className={`h-full ${style.barColor} rounded-full opacity-80`} style={{ width: `${fatPercent}%` }}></div>
                                                 </div>
                                             </div>
-                                            <p className="font-extrabold text-xl text-slate-900 dark:text-white truncate">
-                                                {new Intl.NumberFormat('pt-BR', { notation: "compact", maximumFractionDigits: 1 }).format(cc.totalFaturado)}
-                                            </p>
-                                            <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full mt-2">
-                                                <div className={`h-full ${style.barColor} rounded-full opacity-80`} style={{ width: `${fatPercent}%` }}></div>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <div className="flex items-center space-x-2">
-                                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Pedidos</p>
-                                                <div className={`flex items-center text-[10px] font-bold ${isPositivePed ? 'text-emerald-500' : 'text-red-500'}`}>
-                                                    {isPositivePed ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
-                                                    <span>{Math.abs(variationPed).toFixed(1)}%</span>
+                                            <div className="space-y-1">
+                                                <div className="flex items-center space-x-2">
+                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Pedidos</p>
+                                                    <div className={`flex items-center text-[10px] font-bold ${isPositivePed ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                        {isPositivePed ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
+                                                        <span>{Math.abs(variationPed).toFixed(1)}%</span>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <p className="font-extrabold text-xl text-slate-900 dark:text-white truncate">
-                                                {new Intl.NumberFormat('pt-BR', { notation: "compact", maximumFractionDigits: 1 }).format(cc.totalPedidos)}
-                                            </p>
-                                            <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full mt-2">
-                                                <div className="h-full bg-emerald-500 rounded-full opacity-80" style={{ width: `${pedPercent}%` }}></div>
+                                                <p className="font-extrabold text-xl text-slate-900 dark:text-white truncate">
+                                                    {new Intl.NumberFormat('pt-BR', { notation: "compact", maximumFractionDigits: 1 }).format(cc.totalPedidos)}
+                                                </p>
+                                                <div className="h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full mt-2">
+                                                    <div className="h-full bg-emerald-500 rounded-full opacity-80" style={{ width: `${pedPercent}%` }}></div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            );
+                                    );
                         })}
-                    </div>
+                                </div>
                 </section>
             </main>
 
