@@ -375,10 +375,16 @@ const BluebayAdmDashboardDiretoria = () => {
                             const fatPercent = Math.round((cc.totalFaturado / maxFat) * 100);
                             const pedPercent = Math.round((cc.totalPedidos / maxPed) * 100);
 
-                            // Calculate Comparison
+                            // Comparison Logic for Cost Centers
                             const costCenterComparisons = comparisonTotals?.costCenters || [];
                             const previousCC = costCenterComparisons.find(c => c.nome === cc.nome);
-                            // Compare Pedidos for specific trend
+
+                            // 1. Compare Total Faturado
+                            const compFat = previousCC?.totalFaturado || 0;
+                            const variation = getVariation(cc.totalFaturado, compFat);
+                            const isPositive = variation >= 0;
+
+                            // 2. Compare Total Pedidos
                             const compPed = previousCC?.totalPedidos || 0;
                             const variationPed = getVariation(cc.totalPedidos, compPed);
                             const isPositivePed = variationPed >= 0;
