@@ -9,24 +9,25 @@ import { Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 interface RepresentativesIndicatorsProps {
     stats?: RepresentativeData[];
     isLoading: boolean;
-    selectedRepresentative?: string | null;
-    onRepresentativeSelect?: (repId: string | null) => void;
+    selectedRepresentative?: string[];
+    onRepresentativeSelect?: (repId: string[]) => void;
 }
 
 export const RepresentativesIndicators = ({
     stats,
     isLoading,
-    selectedRepresentative,
+    selectedRepresentative = [], // Default
     onRepresentativeSelect
 }: RepresentativesIndicatorsProps) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
     const handleRepClick = (repId: string) => {
         if (onRepresentativeSelect) {
-            if (selectedRepresentative === repId) {
-                onRepresentativeSelect(null);
+            const current = selectedRepresentative || [];
+            if (current.includes(repId)) {
+                onRepresentativeSelect(current.filter(id => id !== repId));
             } else {
-                onRepresentativeSelect(repId);
+                onRepresentativeSelect([...current, repId]);
             }
         }
     };
@@ -66,7 +67,7 @@ export const RepresentativesIndicators = ({
             <CardContent>
                 <RepresentativesTable
                     stats={displayedStats}
-                    selectedRepresentative={selectedRepresentative || null}
+                    selectedRepresentative={selectedRepresentative}
                     onRepresentativeSelect={handleRepClick}
                 />
 

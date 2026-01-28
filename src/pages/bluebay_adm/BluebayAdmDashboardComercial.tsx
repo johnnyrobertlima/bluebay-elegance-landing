@@ -33,12 +33,15 @@ const BluebayAdmDashboardComercial = () => {
     clientStats,
     isClientLoading,
     productStats,
-    isProductLoading
+    isProductLoading,
+    selectedClient,
+    setSelectedClient,
+    selectedProduct,
+    setSelectedProduct
   } = useDashboardComercial();
 
   const handleDateSelect = useCallback((date: Date) => {
     // When clicking a day on chart, set range to that day
-    setDateRange(date, date);
     setDateRange(date, date);
   }, [setDateRange]);
 
@@ -50,7 +53,9 @@ const BluebayAdmDashboardComercial = () => {
     setSelectedCentroCusto(null);
     setSelectedRepresentative(null);
     setSelectedCity(null);
-  }, [setDateRange, setSelectedCentroCusto, setSelectedRepresentative, setSelectedCity]);
+    setSelectedClient(null);
+    setSelectedProduct(null);
+  }, [setDateRange, setSelectedCentroCusto, setSelectedRepresentative, setSelectedCity, setSelectedClient, setSelectedProduct]);
 
   const { toast } = useToast();
   const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
@@ -116,10 +121,13 @@ const BluebayAdmDashboardComercial = () => {
           onDateRangeChange={setDateRange}
           onRefresh={refreshData}
           isLoading={isLoading || isDetailsLoading}
-          selectedCentroCusto={selectedCentroCusto}
+          // Filters
           selectedRepresentative={selectedRepresentative}
-          onClearRepresentative={() => setSelectedRepresentative(null)}
-          onClearFilters={handleClearFilters}
+          setSelectedRepresentative={setSelectedRepresentative}
+          selectedClient={selectedClient}
+          setSelectedClient={setSelectedClient}
+          selectedProduct={selectedProduct}
+          setSelectedProduct={setSelectedProduct}
         />
 
         {isLoading && isInitialLoad ? (
@@ -148,6 +156,8 @@ const BluebayAdmDashboardComercial = () => {
             onCitySelect={setSelectedCity}
             clientStats={clientStats}
             isClientLoading={isClientLoading}
+            selectedClient={selectedClient}
+            selectedProduct={selectedProduct}
           />
         )}
       </div>

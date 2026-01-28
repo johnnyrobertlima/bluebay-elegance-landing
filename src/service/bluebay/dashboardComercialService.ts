@@ -132,7 +132,7 @@ export const fetchDashboardDetails = async (
   representative: string[] = [],
   cliente: string[] = [],
   produto: string[] = [],
-  limit: number = 200000,
+  limit: number = 1000000,
   signal?: AbortSignal
 ): Promise<FaturamentoItem[]> => {
   try {
@@ -259,7 +259,7 @@ export const fetchDashboardOrders = async (
   representative: string[] = [],
   cliente: string[] = [],
   produto: string[] = [],
-  limit: number = 200000,
+  limit: number = 1000000,
   signal?: AbortSignal
 ): Promise<import("./dashboardComercialTypes").PedidoItem[]> => {
   try {
@@ -701,7 +701,7 @@ export const fetchProductStats = async (
     let hasMore = true;
     let page = 0;
     const pageSize = 1000; // Supabase hard limit often 1000
-    const maxRows = 50000; // Safety limit
+    const maxRows = 300000; // Safety limit increased for 2 years range
 
     console.log(`[SERVICE] Fetching Product Stats with Chunking...`);
 
@@ -1223,7 +1223,7 @@ export const fetchClientStats = async (
     console.log(`[SERVICE] Buscando Stats de Clientes: ${formattedStartDate} até ${formattedEndDate}`);
 
     const pageSize = 1000;
-    const maxRows = 50000;
+    const maxRows = 300000;
 
     // 1. Fetch Invoices with Chunking
     let allInvoices: any[] = [];
@@ -1872,7 +1872,7 @@ export const fetchCityStatsV2 = async (
   const start = `${startDate} 00:00:00`;
   const end = `${endDate} 23:59:59`;
   const PAGE_SIZE = 1000;
-  const maxRows = 200000; // Safety limit
+  const maxRows = 300000; // Safety limit increased
 
   console.log(`[CITY_STATS] Fetching data with pagination (Max ${maxRows} rows)...`);
 

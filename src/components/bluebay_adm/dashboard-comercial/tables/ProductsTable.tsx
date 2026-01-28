@@ -10,14 +10,18 @@ interface ProductsTableProps {
     startDate: Date;
     endDate: Date;
     selectedCentroCusto: string | null;
-    selectedRepresentative: string | null;
+    selectedRepresentative: string[];
+    selectedClient?: string[];
+    selectedProduct?: string[];
 }
 
 export const ProductsTable = ({
     startDate,
     endDate,
     selectedCentroCusto,
-    selectedRepresentative
+    selectedRepresentative = [],
+    selectedClient = [],
+    selectedProduct = []
 }: ProductsTableProps) => {
     const [data, setData] = useState<ProductCategoryStat[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +36,9 @@ export const ProductsTable = ({
                     startDate,
                     endDate,
                     selectedCentroCusto,
-                    selectedRepresentative
+                    selectedRepresentative,
+                    selectedClient,
+                    selectedProduct
                 );
                 if (isMounted) {
                     setData(stats);
@@ -49,7 +55,7 @@ export const ProductsTable = ({
         return () => {
             isMounted = false;
         };
-    }, [startDate, endDate, selectedCentroCusto, selectedRepresentative]);
+    }, [startDate, endDate, selectedCentroCusto, selectedRepresentative, selectedClient, selectedProduct]);
 
     if (isLoading) {
         return (

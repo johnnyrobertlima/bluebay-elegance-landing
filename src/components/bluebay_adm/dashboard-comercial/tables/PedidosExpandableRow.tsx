@@ -96,7 +96,8 @@ export const PedidosExpandableRow: React.FC<PedidosExpandableRowProps> = ({
                                         <TableRow>
                                             <TableHead className="w-10"></TableHead>
                                             <TableHead className="w-[120px]">Pedido</TableHead>
-                                            <TableHead className="w-auto">Apelido</TableHead>
+                                            <TableHead className="w-auto">Cliente</TableHead>
+                                            <TableHead className="w-[180px]">Representante</TableHead>
                                             <TableHead className="text-right w-[100px]">Qtd</TableHead>
                                             <TableHead className="text-right w-[120px]">TM</TableHead>
                                             <TableHead className="text-right w-[150px]">Valor Total</TableHead>
@@ -124,6 +125,7 @@ export const PedidosExpandableRow: React.FC<PedidosExpandableRowProps> = ({
                                                         </TableCell>
                                                         <TableCell className="w-[120px] font-medium">{ped.PED_NUMPEDIDO}</TableCell>
                                                         <TableCell className="w-auto text-sm text-muted-foreground uppercase truncate max-w-[200px]" title={ped.items[0]?.APELIDO || '-'}>{ped.items[0]?.APELIDO || '-'}</TableCell>
+                                                        <TableCell className="w-[180px] text-sm text-muted-foreground uppercase truncate" title={ped.items[0]?.REPRESENTANTE_NOME || '-'}>{ped.items[0]?.REPRESENTANTE_NOME || '-'}</TableCell>
                                                         <TableCell className="w-[100px] text-right">{ped.TOTAL_QUANTIDADE.toLocaleString('pt-BR')}</TableCell>
                                                         <TableCell className="w-[120px] text-right">
                                                             {formatCurrency(ped.TOTAL_QUANTIDADE > 0 ? ped.TOTAL_VALOR / ped.TOTAL_QUANTIDADE : 0)}
@@ -133,7 +135,7 @@ export const PedidosExpandableRow: React.FC<PedidosExpandableRowProps> = ({
 
                                                     {expandedOrders.has(pedKey) && (
                                                         <TableRow>
-                                                            <TableCell colSpan={5} className="p-0 bg-muted/20">
+                                                            <TableCell colSpan={7} className="p-0 bg-muted/20">
                                                                 <div className="p-4">
                                                                     <h4 className="font-medium mb-2">Itens do Pedido {ped.PED_NUMPEDIDO}</h4>
                                                                     <Table className="table-fixed">

@@ -94,6 +94,11 @@ export const FaturamentoTableContent: React.FC<FaturamentoTableContentProps> = (
   const [loadedData, setLoadedData] = useState<Record<string, FaturamentoItem[]>>({});
   const [loadingDates, setLoadingDates] = useState<Set<string>>(new Set());
 
+  // Clear loaded data when dailyStats change (usually due to filters)
+  React.useEffect(() => {
+    setLoadedData({});
+  }, [dailyStats]);
+
   const toggleDate = async (dateStr: string) => {
     const isExpanding = !expandedDates.has(dateStr);
 

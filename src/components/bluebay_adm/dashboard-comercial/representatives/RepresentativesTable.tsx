@@ -23,7 +23,7 @@ export interface RepresentativeData {
 
 interface RepresentativesTableProps {
     stats: RepresentativeData[];
-    selectedRepresentative: string | null;
+    selectedRepresentative: string[];
     onRepresentativeSelect: (repId: string) => void;
 }
 
@@ -49,12 +49,12 @@ export const RepresentativesTable = ({
                     {stats.map((rep, index) => (
                         <tr
                             key={rep.id}
-                            className={`${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100 cursor-pointer ${selectedRepresentative === rep.id ? 'bg-primary/10' : ''
+                            className={`${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-gray-100 cursor-pointer ${selectedRepresentative.includes(rep.id) ? 'bg-primary/10' : ''
                                 }`}
                             onClick={() => onRepresentativeSelect(rep.id)} // Currently simple navigation or filter later
                         >
                             <td className="py-3 px-4 font-medium flex items-center">
-                                {selectedRepresentative === rep.id && (
+                                {selectedRepresentative.includes(rep.id) && (
                                     <Check className="h-4 w-4 mr-2 text-primary" />
                                 )}
                                 <div className="flex flex-col">

@@ -71,16 +71,47 @@ export const FaturamentoTimeSeriesChart = ({
     // Determinar se deve usar dados diários ou mensais
     const monthsDiff = differenceInMonths(endDate, startDate);
 
-    // Se o período for maior que 2 meses, usa dados mensais
+    // Se o período for maior que 2 meses, agrupa os dados diários por mês no frontend
+    // Isso garante consistência com o gráfico diário e evita problemas de agregação no backend
     if (monthsDiff > 2) {
-      return [...monthlyData]
-        .sort((a, b) => a.month.localeCompare(b.month))
-        .map(item => ({
-          label: item.month,
-          value: item.total,
-          pedidoValue: item.pedidoTotal,
-          formattedLabel: item.formattedMonth
-        }));
+      const monthlyAggregation = new Map<string, { total: number; pedidoTotal: number; formattedLabel: string }>();
+
+      dailyData.forEach(item => {
+        // Data vem como YYYY-MM-DD
+        const monthKey = item.date.substring(0, 7); // YYYY-MM
+        const current = monthlyAggregation.get(monthKey) || { total: 0, pedidoTotal: 0, formattedLabel: '' };
+
+        // Atualiza totais
+        current.total += item.total || 0;
+        current.pedidoTotal += item.pedidoTotal || 0;
+
+        // Define label formatada se ainda não tiver (pega do primeiro item ou formata manual)
+        if (!current.formattedLabel) {
+          const [year, month] = monthKey.split('-');
+          const dateObj = new Date(parseInt(year), parseInt(month) - 1, 1);
+          current.formattedLabel = dateObj.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
+          // Capitalize first letter
+          current.formattedLabel = current.formattedLabel.charAt(0).toUpperCase() + current.formattedLabel.slice(1);
+        }
+
+        monthlyAggregation.set(monthKey, current);
+      });
+
+      // Se houver meses faltando (buracos), a gente poderia preencher, mas o map só tem dias com dados.
+      // O backend traria meses vazios?
+      // Melhor usar o backend monthlyData apenas para garantir as chaves de meses se quisermos eixo X completo,
+      // mas os valores pegamos do daily aggregation.
+      // Simplificando: vamos converter o Map para array e ordenar.
+
+      return Array.from(monthlyAggregation.entries())
+        .map(([key, value]) => ({
+          label: key,
+          value: value.total,
+          pedidoValue: value.pedidoTotal,
+          formattedLabel: value.formattedLabel
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+
     } else {
       // Caso contrário, usa dados diários
       return [...dailyData]
@@ -92,7 +123,7 @@ export const FaturamentoTimeSeriesChart = ({
           formattedLabel: item.formattedDate
         }));
     }
-  }, [dailyData, monthlyData, startDate, endDate]);
+  }, [dailyData, startDate, endDate]); // Remove monthlyData dependency as we calculate it
 
   return (
     <Card className="col-span-full">

@@ -17,7 +17,8 @@ import {
   BluebayAdmLandingPage,
   BluebayAdmGestaoPaginas,
   BluebayAdmItemManagement,
-  BluebayAdmGestaoCentroCusto
+  BluebayAdmGestaoCentroCusto,
+  RepresentativeAnalysis
 } from "@/pages/bluebay_adm";
 import BluebayAdmStockSalesAnalytics from "@/pages/bluebay_adm/BluebayAdmStockSalesAnalytics";
 import GestaoRelatorios from "@/pages/bluebay_adm/GestaoRelatorios";
@@ -135,6 +136,11 @@ export const bluebayAdmRoutes = (
     <Route path="/client-area/bluebay_adm/dashboard_diretoria" element={
       <PermissionGuard resourcePath="/client-area/bluebay_adm/dashboard_diretoria">
         <BluebayAdmDashboardDiretoria />
+      </PermissionGuard>
+    } />
+    <Route path="/client-area/bluebay_adm/analise-representante" element={
+      <PermissionGuard resourcePath="/client-area/bluebay_adm/analise-representante">
+        <RepresentativeAnalysis />
       </PermissionGuard>
     } />
   </>

@@ -56,6 +56,11 @@ export const PedidosTable: React.FC<PedidosTableContentProps> = ({
   const [loadedData, setLoadedData] = useState<Record<string, PedidoItem[]>>({});
   const [loadingDates, setLoadingDates] = useState<Set<string>>(new Set());
 
+  // Clear loaded data when dailyStats change (usually due to filters)
+  React.useEffect(() => {
+    setLoadedData({});
+  }, [dailyStats]);
+
   const toggleDate = async (dateStr: string) => {
     const isExpanding = !expandedDates.has(dateStr);
 

@@ -104,9 +104,17 @@ export const useDashboardComercial = (): UseDashboardComercialReturn => {
   const fetchData = useCallback(async () => {
     // 1. Validate internal date range logic inline
     const today = new Date();
-    const oneYearAgo = subDays(today, 365);
+    const twoYearsAgo = subDays(today, 1460); // Extended to 4 years
 
-    if (endDate.getTime() - startDate.getTime() > 365 * 24 * 60 * 60 * 1000) {
+    // Check if range is larger than 2 years check (still warn if range itself is HUGE, but let's relax it slightly or keep it)
+    // User wants to see Jan 2024.
+    // Let's keep the RANGE limit check similar but maybe lenient? 
+    // Actually the user issue was SELECTING start date. 
+    // The range limit check below (endDate - startDate > 730...) prevents > 2 years RANGE.
+    // But selecting Jan 2024 to Jan 2024 is small range, but old history.
+    // So the blocker is `startDate < twoYearsAgo`.
+
+    if (endDate.getTime() - startDate.getTime() > 1460 * 24 * 60 * 60 * 1000) {
       toast({
         title: "Período ajustado",
         description: "O período foi limitado a 90 dias para melhor performance.",
@@ -116,8 +124,8 @@ export const useDashboardComercial = (): UseDashboardComercialReturn => {
       return;
     }
 
-    if (startDate < oneYearAgo) {
-      setStartDate(oneYearAgo);
+    if (startDate < twoYearsAgo) {
+      setStartDate(twoYearsAgo);
       return;
     }
 

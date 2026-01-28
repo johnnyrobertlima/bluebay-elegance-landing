@@ -1,0 +1,34 @@
+-- Manual Backfill for 2023 and 2024
+-- Execute these commands ONE BY ONE to avoid timeouts.
+
+--------------------------------------------------------------------------------
+-- 2023
+--------------------------------------------------------------------------------
+-- SELECT public.populate_commercial_costs_range('2023-01-01 00:00:00', '2023-01-31 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2023-02-01 00:00:00', '2023-02-28 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2023-03-01 00:00:00', '2023-03-31 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2023-04-01 00:00:00', '2023-04-30 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2023-05-01 00:00:00', '2023-05-31 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2023-06-01 00:00:00', '2023-06-30 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2023-07-01 00:00:00', '2023-07-31 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2023-08-01 00:00:00', '2023-08-31 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2023-09-01 00:00:00', '2023-09-30 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2023-10-01 00:00:00', '2023-10-31 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2023-11-01 00:00:00', '2023-11-30 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2023-12-01 00:00:00', '2023-12-31 23:59:59');
+
+--------------------------------------------------------------------------------
+-- 2024
+--------------------------------------------------------------------------------
+-- SELECT public.populate_commercial_costs_range('2024-01-01 00:00:00', '2024-01-31 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2024-02-01 00:00:00', '2024-02-29 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2024-03-01 00:00:00', '2024-03-31 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2024-04-01 00:00:00', '2024-04-30 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2024-05-01 00:00:00', '2024-05-31 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2024-06-01 00:00:00', '2024-06-30 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2024-07-01 00:00:00', '2024-07-31 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2024-08-01 00:00:00', '2024-08-31 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2024-09-01 00:00:00', '2024-09-30 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2024-10-01 00:00:00', '2024-10-31 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2024-11-01 00:00:00', '2024-11-30 23:59:59');
+-- SELECT public.populate_commercial_costs_range('2024-12-01 00:00:00', '2024-12-31 23:59:59');

@@ -84,6 +84,7 @@ export interface PedidoItem {
   CENTROCUSTO?: string;
   CENTRO_CUSTO?: string; // Added for compatibility with the materialized view
   REPRESENTANTE?: number; // Added the missing REPRESENTANTE property
+  REPRESENTANTE_NOME?: string; // Added for the Level 2 grid display
   APELIDO?: string; // Fetched from BLUEBAY_PESSOA
   DESCRICAO?: string; // Fetched from BLUEBAY_ITEM
 }
@@ -138,7 +139,9 @@ export interface CitySalesStat {
   city: string;
   uf: string;
   totalFaturado: number;
-  totalPedidos: number;
+  totalFaturadoCount: number;
+  totalPedidosValue: number;
+  totalPedidosCount: number;
 }
 
 export interface DashboardComercialData {

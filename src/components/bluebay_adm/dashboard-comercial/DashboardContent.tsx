@@ -34,8 +34,8 @@ interface DashboardContentProps {
   } | null;
   selectedCentroCusto: string | null;
   setSelectedCentroCusto: (centroCusto: string | null) => void;
-  selectedRepresentative: string | null;
-  setSelectedRepresentative: (repId: string | null) => void;
+  selectedRepresentative: string[];
+  setSelectedRepresentative: (repId: string[]) => void;
   isLoading: boolean;
   isDetailsLoading?: boolean;
   startDate: Date;
@@ -51,6 +51,8 @@ interface DashboardContentProps {
   onCitySelect?: (city: { city: string; uf: string } | null) => void;
   clientStats?: ClientStat[];
   isClientLoading?: boolean;
+  selectedClient?: string[];
+  selectedProduct?: string[];
 }
 
 export const DashboardContent = ({
@@ -60,6 +62,8 @@ export const DashboardContent = ({
   selectedRepresentative,
   setSelectedRepresentative,
   isLoading,
+  selectedClient,
+  selectedProduct,
   isDetailsLoading,
   startDate,
   endDate,
@@ -307,6 +311,8 @@ export const DashboardContent = ({
               endDate={endDate}
               selectedCentroCusto={selectedCentroCusto}
               selectedRepresentative={selectedRepresentative}
+              selectedClient={selectedClient}
+              selectedProduct={selectedProduct}
             />
           )}
         </TabsContent>
