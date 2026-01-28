@@ -2,19 +2,6 @@
 import { BluebayAdmMenu } from "@/components/bluebay_adm/BluebayAdmMenu";
 import {
     Search,
-    Bell,
-    Download,
-    Banknote,
-    TrendingUp,
-    ShoppingCart,
-    UserPlus,
-    MoreHorizontal,
-    ShieldCheck,
-    Calendar,
-    Wallet,
-    RefreshCw,
-    User,
-    ChevronDown,
     Loader2
 } from "lucide-react";
 import { useDashboardComercial } from "@/hooks/bluebay_adm/dashboard/useDashboardComercial";
@@ -23,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect, useMemo } from "react";
 import { subDays, startOfYear, subMonths } from "date-fns";
 import { ProductCategoryStat, ClientStat } from "@/services/bluebay/dashboardComercialTypes";
+import { AsyncFilter } from "@/components/bluebay_adm/dashboard-comercial/AsyncFilter";
+import { getActivePessoaIds, fetchRepresentativesOptions } from "@/services/bluebay/dashboardComercialService";
 
 const RepresentativeAnalysis = () => {
     const {
@@ -37,36 +26,22 @@ const RepresentativeAnalysis = () => {
         clientStats
     } = useDashboardComercial();
 
-    const [allRepresentatives, setAllRepresentatives] = useState<{ id: string, nome: string }[]>([]);
+    const [activeRepIds, setActiveRepIds] = useState<string[]>([]);
     const [selectedPeriod, setSelectedPeriod] = useState<'30d' | '6m' | '1y' | '3y'>('30d');
 
-    // Fetch all representatives for the dropdown
+    // Fetch active representatives (Last 24 Months)
     useEffect(() => {
-        const fetchReps = async () => {
-            // Fetch distinct representatives from orders or just all people marked as Reps
-            // Using BLUEBAY_PESSOA distinct might be loose, but let's try a direct query
-            // for anyone who IS a representative.
-            /* 
-               Attempt to get all Reps. Since we don't have a reliable 'IS_REP' flag in all DBs,
-               we can query distinct Rep IDs from BLUEBAY_PEDIDO recent history or just fetch all logic.
-               Let's try fetching from BLUEBAY_PESSOA where TIPO or similar indicates it.
-               Fallback: Fetch dashboard stats for a long range to populate defaults? No, too heavy.
-               Let's assume we can fetch active reps from a known RPC or just query.
-            */
-            const { data, error } = await supabase
-                .from('BLUEBAY_PESSOA')
-                .select('PES_CODIGO, APELIDO')
-                .eq('REPRESENTANTE', 'S') // Common convention, verify if fails
-                .order('APELIDO');
-
-            if (data) {
-                setAllRepresentatives(data.map(d => ({
-                    id: String(d.PES_CODIGO),
-                    nome: d.APELIDO || `Rep ${d.PES_CODIGO}`
-                })));
+        const fetchActiveReps = async () => {
+            const end = new Date();
+            const start = subMonths(end, 24);
+            try {
+                const ids = await getActivePessoaIds(start, end, true);
+                setActiveRepIds(Array.from(ids));
+            } catch (err) {
+                console.error("Error fetching active reps:", err);
             }
         };
-        fetchReps();
+        fetchActiveReps();
     }, []);
 
     const handlePeriodChange = (period: '30d' | '6m' | '1y' | '3y') => {
@@ -80,8 +55,7 @@ const RepresentativeAnalysis = () => {
         }
     };
 
-    const handleRepChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const val = e.target.value;
+    const handleRepChange = (val: string | null) => {
         setSelectedRepresentative(val ? [val] : []);
     };
 
@@ -107,6 +81,8 @@ const RepresentativeAnalysis = () => {
 
     const mixTotal = mixCategories.reduce((acc, c) => acc + c.value, 0);
 
+    const hasSelection = selectedRepresentative.length > 0;
+
     return (
         <div className="min-h-screen bg-[#F3F4F6] text-slate-800 font-sans">
             <BluebayAdmMenu />
@@ -118,28 +94,27 @@ const RepresentativeAnalysis = () => {
                         <p className="text-slate-500 mt-1">Acompanhamento de performance em tempo real</p>
                     </div>
                     <div className="flex gap-4">
-                        {isLoading && <Loader2 className="h-6 w-6 animate-spin text-blue-500" />}
+                        {isLoading && hasSelection && <Loader2 className="h-6 w-6 animate-spin text-blue-500" />}
                     </div>
                 </header>
 
                 {/* Filters Section */}
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-10 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
                     <div className="w-full md:w-auto flex items-center gap-3">
-                        <label className="text-sm font-semibold text-slate-500 whitespace-nowrap" htmlFor="rep-select">Representante:</label>
+                        <label className="text-sm font-semibold text-slate-500 whitespace-nowrap">Representante:</label>
                         <div className="relative w-full md:w-72">
-                            <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5" />
-                            <select
-                                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-sm focus:ring-2 focus:ring-blue-100 focus:border-[#3b66ad] appearance-none cursor-pointer outline-none"
-                                id="rep-select"
-                                value={selectedRepresentative[0] || ''}
+                            <AsyncFilter
+                                label="Selecione o Representante"
+                                value={selectedRepresentative[0] || null}
                                 onChange={handleRepChange}
-                            >
-                                <option value="">Todos os Representantes</option>
-                                {allRepresentatives.map(rep => (
-                                    <option key={rep.id} value={rep.id}>{rep.nome}</option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none h-5 w-5" />
+                                fetchOptions={async (q) => {
+                                    const all = await fetchRepresentativesOptions(activeRepIds);
+                                    if (!q) return all;
+                                    return all.filter(r => r.label.toLowerCase().includes(q.toLowerCase()));
+                                }}
+                                width="w-full"
+                                placeholder="Buscar..."
+                            />
                         </div>
                     </div>
                     <div className="w-full md:w-auto flex bg-slate-100 p-1 rounded-xl">
