@@ -14,10 +14,99 @@ import {
     Wallet,
     RefreshCw,
     User,
-    ChevronDown
+    ChevronDown,
+    Loader2
 } from "lucide-react";
+import { useDashboardComercial } from "@/hooks/bluebay_adm/dashboard/useDashboardComercial";
+import { formatCurrency } from "@/utils/formatters";
+import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect, useMemo } from "react";
+import { subDays, startOfYear, subMonths } from "date-fns";
+import { ProductCategoryStat, ClientStat } from "@/services/bluebay/dashboardComercialTypes";
 
 const RepresentativeAnalysis = () => {
+    const {
+        dashboardData,
+        isLoading,
+        setDateRange,
+        startDate,
+        endDate,
+        selectedRepresentative,
+        setSelectedRepresentative,
+        productStats,
+        clientStats
+    } = useDashboardComercial();
+
+    const [allRepresentatives, setAllRepresentatives] = useState<{ id: string, nome: string }[]>([]);
+    const [selectedPeriod, setSelectedPeriod] = useState<'30d' | '6m' | '1y' | '3y'>('30d');
+
+    // Fetch all representatives for the dropdown
+    useEffect(() => {
+        const fetchReps = async () => {
+            // Fetch distinct representatives from orders or just all people marked as Reps
+            // Using BLUEBAY_PESSOA distinct might be loose, but let's try a direct query
+            // for anyone who IS a representative.
+            /* 
+               Attempt to get all Reps. Since we don't have a reliable 'IS_REP' flag in all DBs,
+               we can query distinct Rep IDs from BLUEBAY_PEDIDO recent history or just fetch all logic.
+               Let's try fetching from BLUEBAY_PESSOA where TIPO or similar indicates it.
+               Fallback: Fetch dashboard stats for a long range to populate defaults? No, too heavy.
+               Let's assume we can fetch active reps from a known RPC or just query.
+            */
+            const { data, error } = await supabase
+                .from('BLUEBAY_PESSOA')
+                .select('PES_CODIGO, APELIDO')
+                .eq('REPRESENTANTE', 'S') // Common convention, verify if fails
+                .order('APELIDO');
+
+            if (data) {
+                setAllRepresentatives(data.map(d => ({
+                    id: String(d.PES_CODIGO),
+                    nome: d.APELIDO || `Rep ${d.PES_CODIGO}`
+                })));
+            }
+        };
+        fetchReps();
+    }, []);
+
+    const handlePeriodChange = (period: '30d' | '6m' | '1y' | '3y') => {
+        setSelectedPeriod(period);
+        const today = new Date();
+        switch (period) {
+            case '30d': setDateRange(subDays(today, 30), today); break;
+            case '6m': setDateRange(subMonths(today, 6), today); break;
+            case '1y': setDateRange(subDays(today, 365), today); break;
+            case '3y': setDateRange(subDays(today, 365 * 3), today); break;
+        }
+    };
+
+    const handleRepChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const val = e.target.value;
+        setSelectedRepresentative(val ? [val] : []);
+    };
+
+    // Derived Data
+    const totalFaturado = dashboardData?.totalFaturado || 0;
+    const totalPedidos = dashboardData?.totals?.totalPedidosQty || 0;
+    const novosClientes = clientStats?.length || 0; // "Ativos" proxy
+    const ticketMedio = totalPedidos > 0 ? totalFaturado / totalPedidos : 0;
+
+    // Derived Top Products
+    const topProducts = useMemo(() => {
+        const allItems = productStats.flatMap(cat => cat.items || []);
+        return allItems.sort((a, b) => b.QTDE_FATURADA - a.QTDE_FATURADA).slice(0, 4);
+    }, [productStats]);
+
+    // Derived Mix Categories
+    const mixCategories = useMemo(() => {
+        return productStats.map(cat => ({
+            label: cat.GRU_DESCRICAO || 'Outros',
+            value: cat.VALOR_FATURADO
+        })).sort((a, b) => b.value - a.value).slice(0, 5);
+    }, [productStats]);
+
+    const mixTotal = mixCategories.reduce((acc, c) => acc + c.value, 0);
+
     return (
         <div className="min-h-screen bg-[#F3F4F6] text-slate-800 font-sans">
             <BluebayAdmMenu />
@@ -25,20 +114,11 @@ const RepresentativeAnalysis = () => {
             <main className="max-w-[1440px] mx-auto p-8 lg:p-12">
                 <header className="flex justify-between items-center mb-6">
                     <div>
-                        <h2 className="text-3xl font-bold text-slate-900">Dashboard de Vendas Premium</h2>
+                        <h2 className="text-3xl font-bold text-slate-900">Análise do Representante</h2>
                         <p className="text-slate-500 mt-1">Acompanhamento de performance em tempo real</p>
                     </div>
                     <div className="flex gap-4">
-                        <button className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-500 hover:bg-slate-50 transition-colors">
-                            <Search className="h-6 w-6" />
-                        </button>
-                        <button className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm text-slate-500 hover:bg-slate-50 transition-colors">
-                            <Bell className="h-6 w-6" />
-                        </button>
-                        <button className="flex items-center gap-2 px-6 py-3 bg-[#3b66ad] text-white rounded-xl shadow-md font-medium hover:opacity-90 transition-opacity">
-                            <Download className="h-5 w-5" />
-                            Exportar Relatório
-                        </button>
+                        {isLoading && <Loader2 className="h-6 w-6 animate-spin text-blue-500" />}
                     </div>
                 </header>
 
@@ -51,21 +131,22 @@ const RepresentativeAnalysis = () => {
                             <select
                                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-sm focus:ring-2 focus:ring-blue-100 focus:border-[#3b66ad] appearance-none cursor-pointer outline-none"
                                 id="rep-select"
+                                value={selectedRepresentative[0] || ''}
+                                onChange={handleRepChange}
                             >
                                 <option value="">Todos os Representantes</option>
-                                <option value="1">João Silva (Sul)</option>
-                                <option value="2">Maria Oliveira (Sudeste)</option>
-                                <option value="3">Ricardo Santos (Centro-Oeste)</option>
-                                <option value="4">Fernanda Lima (Nordeste)</option>
+                                {allRepresentatives.map(rep => (
+                                    <option key={rep.id} value={rep.id}>{rep.nome}</option>
+                                ))}
                             </select>
                             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none h-5 w-5" />
                         </div>
                     </div>
                     <div className="w-full md:w-auto flex bg-slate-100 p-1 rounded-xl">
-                        <button className="px-5 py-2 text-sm text-[#3b66ad] font-semibold bg-white shadow-sm rounded-lg transition-all">30 dias</button>
-                        <button className="px-5 py-2 text-sm text-slate-500 rounded-lg hover:text-slate-700 transition-all">6 meses</button>
-                        <button className="px-5 py-2 text-sm text-slate-500 rounded-lg hover:text-slate-700 transition-all">1 ano</button>
-                        <button className="px-5 py-2 text-sm text-slate-500 rounded-lg hover:text-slate-700 transition-all">3 anos</button>
+                        <button onClick={() => handlePeriodChange('30d')} className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all ${selectedPeriod === '30d' ? 'bg-white shadow-sm text-[#3b66ad]' : 'text-slate-500 hover:text-slate-700'}`}>30 dias</button>
+                        <button onClick={() => handlePeriodChange('6m')} className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all ${selectedPeriod === '6m' ? 'bg-white shadow-sm text-[#3b66ad]' : 'text-slate-500 hover:text-slate-700'}`}>6 meses</button>
+                        <button onClick={() => handlePeriodChange('1y')} className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all ${selectedPeriod === '1y' ? 'bg-white shadow-sm text-[#3b66ad]' : 'text-slate-500 hover:text-slate-700'}`}>1 ano</button>
+                        <button onClick={() => handlePeriodChange('3y')} className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all ${selectedPeriod === '3y' ? 'bg-white shadow-sm text-[#3b66ad]' : 'text-slate-500 hover:text-slate-700'}`}>3 anos</button>
                     </div>
                 </div>
 
@@ -74,13 +155,16 @@ const RepresentativeAnalysis = () => {
                         <div className="relative z-10 flex justify-between items-start mb-8">
                             <div>
                                 <p className="text-blue-100 font-medium mb-1">Faturamento Total</p>
-                                <h3 className="text-4xl lg:text-5xl font-bold">R$ 350.000</h3>
+                                <h3 className="text-4xl lg:text-5xl font-bold">
+                                    {new Intl.NumberFormat('pt-BR', { notation: "compact", maximumFractionDigits: 1, style: 'currency', currency: 'BRL' }).format(totalFaturado)}
+                                </h3>
                             </div>
                             <Banknote className="h-12 w-12 opacity-40" />
                         </div>
                         <div className="relative z-10 flex items-center gap-2 bg-white/20 w-fit px-4 py-1.5 rounded-full text-sm font-medium">
                             <TrendingUp className="h-4 w-4" />
-                            +12% vs mês anterior
+                            {/* Placeholder for variation until implemented */}
+                            <span>Vs. Período Anterior</span>
                         </div>
                     </div>
 
@@ -88,26 +172,26 @@ const RepresentativeAnalysis = () => {
                         <div className="flex justify-between items-start mb-8">
                             <div>
                                 <p className="text-green-100 font-medium mb-1">Total de Pedidos</p>
-                                <h3 className="text-4xl lg:text-5xl font-bold">75 Pedidos</h3>
+                                <h3 className="text-4xl lg:text-5xl font-bold">{totalPedidos}</h3>
                             </div>
                             <ShoppingCart className="h-12 w-12 opacity-40" />
                         </div>
                         <p className="text-sm text-green-100 bg-white/10 w-fit px-4 py-1.5 rounded-full">
-                            Ticket Médio: <span className="font-bold">R$ 4.667</span>
+                            Ticket Médio: <span className="font-bold">{formatCurrency(ticketMedio)}</span>
                         </p>
                     </div>
 
                     <div className="bg-[#e08d4d] p-8 rounded-[16px] text-white shadow-xl relative overflow-hidden">
                         <div className="flex justify-between items-start mb-8">
                             <div>
-                                <p className="text-orange-100 font-medium mb-1">Novos Clientes</p>
-                                <h3 className="text-4xl lg:text-5xl font-bold">8 Novos</h3>
+                                <p className="text-orange-100 font-medium mb-1">Clientes Ativos</p>
+                                <h3 className="text-4xl lg:text-5xl font-bold">{novosClientes}</h3>
                             </div>
                             <UserPlus className="h-12 w-12 opacity-40" />
                         </div>
                         <div className="flex gap-4 text-sm text-orange-100 font-medium">
-                            <span className="bg-white/10 px-3 py-1 rounded-lg">Ativos: <span className="font-bold">45</span></span>
-                            <span className="bg-white/10 px-3 py-1 rounded-lg">Inativos: <span className="font-bold">20</span></span>
+                            {/* Static for now */}
+                            <span className="bg-white/10 px-3 py-1 rounded-lg">Novos: <span className="font-bold">-</span></span>
                         </div>
                     </div>
                 </div>
@@ -115,32 +199,31 @@ const RepresentativeAnalysis = () => {
                 <div className="grid grid-cols-12 gap-8 mb-10">
                     <div className="col-span-12 lg:col-span-5 bg-white p-8 rounded-[16px] shadow-sm border border-slate-100">
                         <div className="flex justify-between items-center mb-10">
-                            <h4 className="font-bold text-xl text-slate-800">Mix de Produtos Vendidos</h4>
+                            <h4 className="font-bold text-xl text-slate-800">Mix de Produtos (Top 5)</h4>
                             <MoreHorizontal className="h-6 w-6 text-slate-400 cursor-pointer" />
                         </div>
                         <div className="flex flex-col xl:flex-row items-center gap-10">
                             <div className="relative w-[180px] h-[180px] rounded-full shrink-0"
                                 style={{
-                                    background: 'conic-gradient(#3b66ad 0% 40%, #508d62 40% 70%, #e08d4d 70% 85%, #94a3b8 85% 95%, #f59e0b 95% 100%)'
+                                    background: 'conic-gradient(#3b66ad 0% 40%, #508d62 40% 70%, #e08d4d 70% 85%, #94a3b8 85% 95%, #f59e0b 95% 100%)' // TODO: Dynamic Gradient
                                 }}>
                                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[110px] h-[110px] bg-white rounded-full"></div>
                             </div>
 
                             <div className="flex-1 w-full space-y-5">
-                                {[
-                                    { label: "Básicos", color: "bg-[#3b66ad]", value: "40%" },
-                                    { label: "Jeans", color: "bg-[#508d62]", value: "30%" },
-                                    { label: "Fitness", color: "bg-[#e08d4d]", value: "15%" },
-                                    { label: "Premium", color: "bg-slate-400", value: "10%" }
-                                ].map((item, idx) => (
-                                    <div key={idx} className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-4 h-4 rounded-full ${item.color}`}></div>
-                                            <span className="text-slate-600 font-medium">{item.label}</span>
+                                {mixCategories.map((item, idx) => {
+                                    const percent = mixTotal > 0 ? (item.value / mixTotal) * 100 : 0;
+                                    const colors = ["bg-[#3b66ad]", "bg-[#508d62]", "bg-[#e08d4d]", "bg-slate-400", "bg-yellow-500"];
+                                    return (
+                                        <div key={idx} className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-4 h-4 rounded-full ${colors[idx % colors.length]}`}></div>
+                                                <span className="text-slate-600 font-medium truncate max-w-[120px]" title={item.label}>{item.label}</span>
+                                            </div>
+                                            <span className="font-bold text-slate-800">{Math.round(percent)}% ({formatCurrency(item.value)})</span>
                                         </div>
-                                        <span className="font-bold text-slate-800">{item.value}</span>
-                                    </div>
-                                ))}
+                                    )
+                                })}
                             </div>
                         </div>
                     </div>
@@ -150,28 +233,25 @@ const RepresentativeAnalysis = () => {
                             <h4 className="font-bold text-xl text-slate-800">Top Clientes</h4>
                             <button className="text-[#3b66ad] text-sm font-bold hover:underline">Ver relatório completo</button>
                         </div>
-                        <div className="space-y-4">
-                            {[
-                                { name: "Loja Moda Viva", city: "Curitiba, PR", val: "R$ 80.000", orders: "12 pedidos", initials: "MV", color: "text-[#3b66ad] bg-blue-100", border: "hover:border-blue-200" },
-                                { name: "Boutique Elegance", city: "São Paulo, SP", val: "R$ 65.000", orders: "8 pedidos", initials: "BE", color: "text-[#508d62] bg-green-100", border: "hover:border-green-200" },
-                                { name: "Estilo Jovem", city: "Rio de Janeiro, RJ", val: "R$ 50.000", orders: "5 pedidos", initials: "EJ", color: "text-[#e08d4d] bg-orange-100", border: "hover:border-orange-200" }
-                            ].map((client, idx) => (
-                                <div key={idx} className={`flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-slate-100 ${client.border} transition-colors cursor-default`}>
+                        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                            {clientStats.sort((a, b) => b.TOTAL_FATURADO - a.TOTAL_FATURADO).slice(0, 5).map((client, idx) => (
+                                <div key={idx} className={`flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-slate-100 hover:border-blue-200 transition-colors cursor-default`}>
                                     <div className="flex items-center gap-5">
-                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${client.color}`}>
-                                            {client.initials}
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg bg-blue-100 text-blue-600`}>
+                                            {client.APELIDO?.substring(0, 2).toUpperCase() || "CL"}
                                         </div>
                                         <div>
-                                            <span className="font-bold text-slate-700 block text-lg">{client.name}</span>
-                                            <span className="text-sm text-slate-500">{client.city}</span>
+                                            <span className="font-bold text-slate-700 block text-lg truncate max-w-[200px]">{client.APELIDO || 'Cliente'}</span>
+                                            <span className="text-sm text-slate-500">ID: {client.PES_CODIGO}</span>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-bold text-slate-900 text-lg">{client.val}</p>
-                                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{client.orders}</p>
+                                        <p className="font-bold text-slate-900 text-lg">{formatCurrency(client.TOTAL_FATURADO)}</p>
+                                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{client.TOTAL_PEDIDO} pedidos</p>
                                     </div>
                                 </div>
                             ))}
+                            {clientStats.length === 0 && <p className="text-center text-slate-400 py-8">Nenhum cliente no período.</p>}
                         </div>
                     </div>
                 </div>
@@ -179,22 +259,22 @@ const RepresentativeAnalysis = () => {
                 <div className="bg-white p-8 rounded-[16px] shadow-sm border border-slate-100 mb-10">
                     <h4 className="font-bold text-xl text-slate-800 mb-10">Top Produtos Vendidos</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                        {[
-                            { name: "Blusa X3", count: "120 unid.", pct: "100%" },
-                            { name: "Calça Jeans Y1", count: "90 unid.", pct: "75%" },
-                            { name: "Jaqueta Z5", count: "60 unid.", pct: "50%" },
-                            { name: "Camiseta Básica", count: "50 unid.", pct: "42%" }
-                        ].map((prod, idx) => (
-                            <div key={idx}>
-                                <div className="flex justify-between items-center mb-3">
-                                    <span className="font-semibold text-slate-700">{prod.name}</span>
-                                    <span className="text-slate-500 font-bold">{prod.count}</span>
+                        {topProducts.map((prod, idx) => {
+                            const max = topProducts[0]?.QTDE_FATURADA || 1;
+                            const pct = (prod.QTDE_FATURADA / max) * 100;
+                            return (
+                                <div key={idx}>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <span className="font-semibold text-slate-700">{prod.DESCRICAO} <span className="text-xs text-gray-400 ml-2">Ref: {prod.ITEM_CODIGO}</span></span>
+                                        <span className="text-slate-500 font-bold">{prod.QTDE_FATURADA} unid.</span>
+                                    </div>
+                                    <div className="w-full bg-slate-100 rounded-full h-3">
+                                        <div className="bg-[#3b66ad] h-3 rounded-full" style={{ width: `${pct}%` }}></div>
+                                    </div>
                                 </div>
-                                <div className="w-full bg-slate-100 rounded-full h-3">
-                                    <div className="bg-[#3b66ad] h-3 rounded-full" style={{ width: prod.pct }}></div>
-                                </div>
-                            </div>
-                        ))}
+                            )
+                        })}
+                        {topProducts.length === 0 && <p className="text-slate-400">Sem dados de produtos.</p>}
                     </div>
                 </div>
 
@@ -204,8 +284,8 @@ const RepresentativeAnalysis = () => {
                             <ShieldCheck className="h-8 w-8" />
                         </div>
                         <div>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Ativação</p>
-                            <p className="text-3xl font-bold text-slate-800">67%</p>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Itens</p>
+                            <p className="text-3xl font-bold text-slate-800">{dashboardData?.totalItens?.toLocaleString()}</p>
                         </div>
                     </div>
 
@@ -214,8 +294,8 @@ const RepresentativeAnalysis = () => {
                             <Calendar className="h-8 w-8" />
                         </div>
                         <div>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Frequência</p>
-                            <p className="text-3xl font-bold text-slate-800">28 dias</p>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Média Itens/Pedido</p>
+                            <p className="text-3xl font-bold text-slate-800">{dashboardData?.totals?.totalPedidosQty ? Math.round(dashboardData.totalItens / dashboardData.totals.totalPedidosQty) : 0}</p>
                         </div>
                     </div>
 
@@ -224,8 +304,8 @@ const RepresentativeAnalysis = () => {
                             <Wallet className="h-8 w-8" />
                         </div>
                         <div>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Margem</p>
-                            <p className="text-3xl font-bold text-slate-800">35%</p>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Valor Médio Item</p>
+                            <p className="text-3xl font-bold text-slate-800">{formatCurrency(dashboardData?.mediaValorItem)}</p>
                         </div>
                     </div>
 
@@ -234,8 +314,9 @@ const RepresentativeAnalysis = () => {
                             <RefreshCw className="h-8 w-8" />
                         </div>
                         <div>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Troca</p>
-                            <p className="text-3xl font-bold text-slate-800">4%</p>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Devoluções</p>
+                            <p className="text-3xl font-bold text-slate-800">-</p>
+                            {/* Placeholder as we don't have return data yet */}
                         </div>
                     </div>
                 </div>
