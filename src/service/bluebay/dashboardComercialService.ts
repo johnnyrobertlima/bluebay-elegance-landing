@@ -35,7 +35,7 @@ export const fetchDashboardStats = async (
     console.log(`[SERVICE] Buscando estatísticas via RPC: ${formattedStartDate} até ${formattedEndDate}`);
     console.log(`[SERVICE] Params -> CostCenter: ${centroCusto}, Rep: ${singleRep}`);
 
-    const { data: stats, error: statsError } = await supabase.rpc('get_commercial_dashboard_stats_v2', {
+    const { data: stats, error: statsError } = await supabase.rpc('get_commercial_dashboard_stats_v3', {
       p_start_date: formattedStartDate,
       p_end_date: formattedEndDate,
       p_centro_custo: centroCusto && centroCusto !== "none" ? centroCusto : null,
@@ -50,7 +50,23 @@ export const fetchDashboardStats = async (
       throw statsError;
     }
 
-    const rawStats = stats as any;
+    console.log('[SERVICE] RPC Response RAW:', JSON.stringify(stats));
+
+    // Handle potential array wrapping from Supabase in some contexts
+    let rawStats = stats as any;
+    if (Array.isArray(rawStats) && rawStats.length > 0) {
+      // ... existing code ...
+    }
+
+    console.log('[SERVICE_DEBUG] RPC Totals Keys:', Object.keys(rawStats?.totals || {}));
+    console.log('[SERVICE_DEBUG] RPC Totals Values:', rawStats?.totals);
+
+    // Ensure rawStats is an object
+    if (!rawStats || typeof rawStats !== 'object') {
+      console.warn('[SERVICE] RPC returned invalid format:', rawStats);
+      rawStats = { daily: [], totals: {}, costCenters: [], representatives: [], monthly: [] };
+    }
+
     const rawDaily = rawStats.daily || [];
 
     // Map direct RPC results to DailyFaturamento (RPC already aggregates by date)
@@ -98,12 +114,13 @@ export const fetchDashboardStats = async (
       totalFaturado: totals?.totalFaturado || 0,
       totalItens: totals?.totalItens || 0,
       mediaValorItem: totals?.mediaValorItem || 0,
-      totals: totals || {
-        totalFaturado: 0,
-        totalItens: 0,
-        mediaValorItem: 0,
-        totalPedidosValue: 0,
-        totalPedidosQty: 0
+      totals: {
+        totalFaturado: totals?.totalFaturado || 0,
+        totalItens: totals?.totalItens || 0,
+        mediaValorItem: totals?.mediaValorItem || 0,
+        totalPedidosValue: totals?.totalPedidosValue || mergedDaily.reduce((acc: number, d: any) => acc + (Number(d.pedidoTotal) || 0), 0),
+        totalPedidosQty: totals?.totalPedidosQty || mergedDaily.reduce((acc: number, d: any) => acc + (Number(d.pedidoCount) || 0), 0),
+        totalPedidosCount: totals?.totalPedidosCount // Added
       },
 
       costCenterStats: costCenters,
@@ -121,6 +138,41 @@ export const fetchDashboardStats = async (
     throw error;
   }
 };
+
+/**
+ * Busca métricas de clientes exclusivas por representante (Ativos, Carteira, Novos)
+ */
+export const fetchRepresentativeClientMetrics = async (
+  representativeId: number,
+  startDate: Date,
+  endDate: Date
+) => {
+  try {
+    const start = format(startDate, 'yyyy-MM-dd 00:00:00');
+    const end = format(endDate, 'yyyy-MM-dd 23:59:59');
+
+    console.log(`[SERVICE] Fetching Client Metrics for Rep ${representativeId}: ${start} to ${end}`);
+
+    const { data, error } = await supabase.rpc('get_representative_client_metrics', {
+      p_rep_id: representativeId,
+      p_start_date: start,
+      p_end_date: end
+    });
+
+    if (error) {
+      console.error('[SERVICE] Error calling get_representative_client_metrics:', error);
+      // Fallback to zeros if RPC missing or error
+      return { active_clients: 0, portfolio_clients: 0, new_clients: 0 };
+    }
+
+    return data as { active_clients: number; portfolio_clients: number; new_clients: number };
+
+  } catch (error) {
+    console.error('[SERVICE] Unexpected error in fetchRepresentativeClientMetrics:', error);
+    return { active_clients: 0, portfolio_clients: 0, new_clients: 0 };
+  }
+};
+
 
 /**
  * Busca detalhes das transações para a tabela (Pode ser mais lento)
@@ -1497,10 +1549,36 @@ export const getActivePessoaIds = async (startDate: Date, endDate: Date, isRep: 
     }
   }
 
+  console.log(`[SERVICE] getActivePessoaIds (${isRep ? 'REPS' : 'CLIENTS'}): Found ${ids.size} unique IDs.`);
   return ids;
 };
 
+/**
+ * Fetch active representatives using dedicated RPC for performance
+ */
+export const fetchActiveRepresentativesRPC = async (lookbackMonths: number = 24) => {
+  console.log(`[SERVICE] Fetching active representatives (RPC) for past ${lookbackMonths} months...`);
+
+  const { data, error } = await supabase.rpc('get_active_representatives', {
+    lookback_months: lookbackMonths
+  });
+
+  if (error) {
+    console.error('[SERVICE] Error calling get_active_representatives RPC:', error);
+    // Fallback? Returing empty allows UI to handle it or show everything.
+    return [];
+  }
+
+  console.log(`[SERVICE] RPC returned ${data?.length} representatives.`);
+
+  return (data || []).map((r: any) => ({
+    value: String(r.codigo_representante),
+    label: r.nome_representante
+  }));
+};
+
 export const fetchRepresentativesOptions = async (allowedIds?: string[]) => {
+  console.log(`[SERVICE] fetchRepresentativesOptions called with allowedIds length: ${allowedIds?.length}`);
   let query = supabase
     .from('BLUEBAY_PESSOA')
     .select('PES_CODIGO, APELIDO')
@@ -1513,6 +1591,7 @@ export const fetchRepresentativesOptions = async (allowedIds?: string[]) => {
     query = query.in('PES_CODIGO', allowedIds);
   } else if (allowedIds && allowedIds.length === 0) {
     // If an empty allow-list is provided, return nothing (strict filtering)
+    console.log('[SERVICE] fetchRepresentativesOptions: Empty allowedIds provided, returning empty list.');
     return [];
   }
 
@@ -1523,6 +1602,7 @@ export const fetchRepresentativesOptions = async (allowedIds?: string[]) => {
     return [];
   }
 
+  console.log(`[SERVICE] fetchRepresentativesOptions: Returning ${data?.length} options.`);
   return (data || []).map(r => ({
     value: String(r.PES_CODIGO),
     label: r.APELIDO ? r.APELIDO.trim() : `Rep ${r.PES_CODIGO}`
@@ -1671,11 +1751,18 @@ export const calcDashboardStatsManual = async (
     const repIds = new Set<string>();
 
     // --- Process Invoices ---
+    // --- Process Invoices ---
     invoices.forEach((inv: any) => {
       const valor = Number(inv.valor_nota) || 0;
       const qtde = Number(inv.quantidade) || 0;
 
-      totalFaturado += valor;
+      // Fix: Use Calculated Total (Qty * Unit) if available, or fallback to valor_nota
+      const valorUnit = Number(inv.valor_unitario) || 0;
+      const valorCalc = valorUnit > 0 ? (qtde * valorUnit) : valor;
+
+      const valorFinal = valorCalc;
+
+      totalFaturado += valorFinal;
       totalItens += qtde;
 
       // Daily
@@ -1684,7 +1771,7 @@ export const calcDashboardStatsManual = async (
         dailyMap.set(dateKey, { total: 0, faturamentoCount: 0, pedidoTotal: 0, pedidoCount: 0 });
       }
       const day = dailyMap.get(dateKey)!;
-      day.total += valor;
+      day.total += valorFinal;
       day.faturamentoCount += 1;
 
       // Cost Center
