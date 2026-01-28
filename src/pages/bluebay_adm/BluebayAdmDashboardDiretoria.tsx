@@ -378,10 +378,10 @@ const BluebayAdmDashboardDiretoria = () => {
                             // Calculate Comparison
                             const costCenterComparisons = comparisonTotals?.costCenters || [];
                             const previousCC = costCenterComparisons.find(c => c.nome === cc.nome);
-                            // Compare Total Faturado for trend
-                            const compFat = previousCC?.totalFaturado || 0;
-                            const variation = getVariation(cc.totalFaturado, compFat);
-                            const isPositive = variation >= 0;
+                            // Compare Pedidos for specific trend
+                            const compPed = previousCC?.totalPedidos || 0;
+                            const variationPed = getVariation(cc.totalPedidos, compPed);
+                            const isPositivePed = variationPed >= 0;
 
                             return (
                                 <div key={idx} className="bg-white dark:bg-[#111827] p-6 rounded-[2rem] border border-slate-200 dark:border-white/10 shadow-sm relative overflow-hidden group">
@@ -408,7 +408,13 @@ const BluebayAdmDashboardDiretoria = () => {
 
                                     <div className="grid grid-cols-2 gap-8 relative z-10">
                                         <div className="space-y-1">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Faturado</p>
+                                            <div className="flex items-center space-x-2">
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Faturado</p>
+                                                <div className={`flex items-center text-[10px] font-bold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                    {isPositive ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
+                                                    <span>{Math.abs(variation).toFixed(1)}%</span>
+                                                </div>
+                                            </div>
                                             <p className="font-extrabold text-xl text-slate-900 dark:text-white truncate">
                                                 {new Intl.NumberFormat('pt-BR', { notation: "compact", maximumFractionDigits: 1 }).format(cc.totalFaturado)}
                                             </p>
@@ -417,7 +423,13 @@ const BluebayAdmDashboardDiretoria = () => {
                                             </div>
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Pedidos</p>
+                                            <div className="flex items-center space-x-2">
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Pedidos</p>
+                                                <div className={`flex items-center text-[10px] font-bold ${isPositivePed ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                    {isPositivePed ? <TrendingUp className="w-3 h-3 mr-0.5" /> : <TrendingDown className="w-3 h-3 mr-0.5" />}
+                                                    <span>{Math.abs(variationPed).toFixed(1)}%</span>
+                                                </div>
+                                            </div>
                                             <p className="font-extrabold text-xl text-slate-900 dark:text-white truncate">
                                                 {new Intl.NumberFormat('pt-BR', { notation: "compact", maximumFractionDigits: 1 }).format(cc.totalPedidos)}
                                             </p>
