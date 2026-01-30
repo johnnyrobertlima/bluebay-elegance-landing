@@ -134,7 +134,11 @@ export const fetchDashboardStats = async (
         hasCompleteData: true
       }
     };
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.log('[SERVICE] Fetch aborted (ignoring).');
+      throw error; // Caller handles it (hooks usually ignore aborts)
+    }
     console.error('[SERVICE] Erro ao carregar estatísticas:', error);
     throw error;
   }
@@ -264,18 +268,29 @@ export const fetchRepresentativeInvoices = async (
     }
   }
 
-  // 3. Merge
-  return invoices.map(i => {
+  // 3. Merge and Group by Note
+  const groupedInvoicesMap = new Map<string, any>();
+
+  invoices.forEach(i => {
     const client = clientMap.get(i.pes_codigo);
-    return {
-      ...i,
-      razaosocial: client?.razao || i.razao_social, // Prefer Pessoa table
-      apelido: client?.apelido || i.apelido,
-      grupo_economico: client?.grupo || 'Não Definido', // New field
-      centrocusto: i.centrocusto // Keep original just in case
-    };
+    const noteKey = `${i.nota}-${i.pes_codigo}`; // Group by Note + Client to avoid collision across clients if note numbers repeat
+
+    if (!groupedInvoicesMap.has(noteKey)) {
+      groupedInvoicesMap.set(noteKey, {
+        ...i,
+        valor_nota: 0, // Will be summed
+        razaosocial: client?.razao || i.razao_social,
+        apelido: client?.apelido || i.apelido,
+        grupo_economico: client?.grupo || 'Não Definido'
+      });
+    }
+
+    const existing = groupedInvoicesMap.get(noteKey);
+    existing.valor_nota += Number(i.valor_nota) || 0;
   });
-};
+
+  return Array.from(groupedInvoicesMap.values()).sort((a, b) => new Date(b.data_emissao).getTime() - new Date(a.data_emissao).getTime());
+}
 
 /**
  * Busca detalhes dos itens de um pedido específico
@@ -946,213 +961,29 @@ export const fetchProductStats = async (
     const start = format(startDate, 'yyyy-MM-dd 00:00:00');
     const end = format(endDate, 'yyyy-MM-dd 23:59:59');
 
-    console.log(`[SERVICE] Fetching Product Stats: ${start} to ${end}`);
-    console.log(`[SERVICE] Product Stats Params -> CostCenter: ${centroCusto}, Rep: ${representative}`);
+    console.log(`[SERVICE] Fetching Product Stats (RPC V2): ${start} to ${end}`);
 
-    // 1. Fetch Orders with Chunking (to bypass 1000 row limit)
-    let allOrders: any[] = [];
-    let hasMore = true;
-    let page = 0;
-    const pageSize = 1000; // Supabase hard limit often 1000
-    const maxRows = 300000; // Safety limit increased for 2 years range
+    // Map strings to numbers where necessary for RPC
+    const repIds = representative?.filter(r => r).map(Number).filter(n => !isNaN(n)) || [];
+    const clientIds = cliente?.filter(c => c).map(Number).filter(n => !isNaN(n)) || [];
+    const productIds = produto?.filter(p => p) || [];
 
-    console.log(`[SERVICE] Fetching Product Stats with Chunking...`);
-
-    while (hasMore && allOrders.length < maxRows) {
-      const from = page * pageSize;
-      const to = from + pageSize - 1;
-
-      let query = supabase
-        .from('BLUEBAY_PEDIDO')
-        .select('PED_NUMPEDIDO, DATA_PEDIDO, ITEM_CODIGO, QTDE_PEDIDA, VALOR_UNITARIO, QTDE_ENTREGUE, PES_CODIGO, CENTROCUSTO, REPRESENTANTE, STATUS')
-        .gte('DATA_PEDIDO', start)
-        .lte('DATA_PEDIDO', end)
-        .neq('STATUS', '4')
-        .order('DATA_PEDIDO', { ascending: false })
-        .range(from, to);
-
-      if (centroCusto && centroCusto !== "Não identificado" && centroCusto !== "none") {
-        query = query.eq('CENTROCUSTO', centroCusto);
-      } else if (centroCusto === "Não identificado") {
-        query = query.is('CENTROCUSTO', null);
-      }
-
-      if (representative && representative.length > 0) {
-        query = query.in('REPRESENTANTE', representative);
-      }
-
-      if (cliente && cliente.length > 0) {
-        query = query.in('PES_CODIGO', cliente);
-      }
-
-      if (produto && produto.length > 0) {
-        query = query.in('ITEM_CODIGO', produto);
-      }
-
-      const { data: chunk, error } = await query;
-      if (error) {
-        console.error('[SERVICE] Error fetching product stats chunk:', error);
-        throw error;
-      }
-
-      if (chunk && chunk.length > 0) {
-        allOrders = [...allOrders, ...chunk];
-        if (chunk.length < pageSize) {
-          hasMore = false;
-        }
-        page++;
-      } else {
-        hasMore = false;
-      }
-    }
-
-    const orders = allOrders;
-    console.log(`[SERVICE] Fetch Product Stats: Retrieved Total ${orders.length} rows.`);
-
-    if (orders.length > 0) {
-      console.log('[SERVICE] DEBUG First Item:', {
-        DATA_PEDIDO: orders[0].DATA_PEDIDO,
-        REPRESENTANTE: orders[0].REPRESENTANTE,
-        TYPE_DATA: typeof orders[0].DATA_PEDIDO
-      });
-    }
-
-    if (orders.length === 0) return [];
-
-    // 2. Extract Unique Codes
-    const uniqueItemCodes = [...new Set(orders.map((o: any) => o.ITEM_CODIGO).filter(Boolean))];
-    const uniquePesCodigos = [...new Set(orders.map((o: any) => o.PES_CODIGO).filter(Boolean))];
-
-    // 3. Fetch Items Details
-    const itemMap = new Map<string, { desc: string, group: string }>();
-    if (uniqueItemCodes.length > 0) {
-      console.log(`[SERVICE] Fetching details for ${uniqueItemCodes.length} items in batches of 50...`);
-      const batchSize = 50;
-      for (let i = 0; i < uniqueItemCodes.length; i += batchSize) {
-        const batchCodes = uniqueItemCodes.slice(i, i + batchSize);
-        const { data: itemsChunk, error: itemsError } = await supabase
-          .from('BLUEBAY_ITEM')
-          .select('ITEM_CODIGO, DESCRICAO, GRU_DESCRICAO')
-          .in('ITEM_CODIGO', batchCodes);
-
-        if (itemsError) {
-          console.error('[SERVICE] Error fetching item batch:', itemsError);
-        }
-
-        if (itemsChunk) {
-          itemsChunk.forEach((i: any) => {
-            itemMap.set(String(i.ITEM_CODIGO), { desc: i.DESCRICAO, group: i.GRU_DESCRICAO });
-          });
-        }
-      }
-    }
-
-    // 4. Fetch Pessoas Details (for APELIDO)
-    const pessoaMap = new Map<string, string>();
-    if (uniquePesCodigos.length > 0) {
-      const { data: pessoas } = await supabase
-        .from('BLUEBAY_PESSOA')
-        .select('PES_CODIGO, APELIDO, RAZAOSOCIAL')
-        .in('PES_CODIGO', uniquePesCodigos);
-
-      pessoas?.forEach((p: any) => {
-        const name = p.APELIDO && p.APELIDO.trim() !== '' ? p.APELIDO : p.RAZAOSOCIAL;
-        pessoaMap.set(String(p.PES_CODIGO), name);
-      });
-    }
-
-    // 5. Aggregate Data
-    const categoryMap = new Map<string, import("./dashboardComercialTypes").ProductCategoryStat>();
-
-    orders.forEach((order: any) => {
-      const itemCode = order.ITEM_CODIGO;
-      if (!itemCode) return;
-
-      const info = itemMap.get(String(itemCode)) || { desc: 'SEM CADASTRO', group: 'OUTROS' };
-      const groupKey = info.group || 'OUTROS';
-      const itemKey = String(itemCode);
-
-      // Init Category
-      if (!categoryMap.has(groupKey)) {
-        categoryMap.set(groupKey, {
-          GRU_DESCRICAO: groupKey,
-          VALOR_PEDIDO: 0,
-          QTDE_ITENS: 0,
-          VALOR_FATURADO: 0,
-          QTDE_FATURADA: 0,
-          TM: 0,
-          items: []
-        });
-      }
-      const cat = categoryMap.get(groupKey)!;
-
-      // Init/Find Item in Category
-      let itemStat = cat.items.find(i => i.ITEM_CODIGO === itemKey);
-      if (!itemStat) {
-        itemStat = {
-          ITEM_CODIGO: itemKey,
-          DESCRICAO: info.desc,
-          VALOR_PEDIDO: 0,
-          QTDE_ITENS: 0,
-          VALOR_FATURADO: 0,
-          QTDE_FATURADA: 0,
-          TM: 0,
-          orders: []
-        };
-        cat.items.push(itemStat);
-      }
-
-      // Calcs
-      const qtdePedida = order.QTDE_PEDIDA || 0;
-      const valorUnitario = order.VALOR_UNITARIO || 0;
-      const valorTotal = qtdePedida * valorUnitario;
-      const qtdeEntregue = order.QTDE_ENTREGUE || 0;
-      const valorFaturado = qtdeEntregue * valorUnitario;
-
-      // Add to Item
-      itemStat.VALOR_PEDIDO += valorTotal;
-      itemStat.QTDE_ITENS += qtdePedida;
-      itemStat.VALOR_FATURADO += valorFaturado;
-      itemStat.QTDE_FATURADA += qtdeEntregue;
-
-      // Add to Category
-      cat.VALOR_PEDIDO += valorTotal;
-      cat.QTDE_ITENS += qtdePedida;
-      cat.VALOR_FATURADO += valorFaturado;
-      cat.QTDE_FATURADA += qtdeEntregue;
-
-      // Add Order Detail
-      itemStat.orders.push({
-        PED_NUMPEDIDO: order.PED_NUMPEDIDO,
-        APELIDO: pessoaMap.get(String(order.PES_CODIGO)) || '',
-        DATA_PEDIDO: order.DATA_PEDIDO,
-        QTDE_PEDIDA: qtdePedida,
-        VALOR_UNITARIO: valorUnitario,
-        VALOR_TOTAL: valorTotal,
-        QTDE_ENTREGUE: qtdeEntregue,
-        VALOR_FATURADO: valorFaturado
-      });
+    const { data, error } = await supabase.rpc('get_product_stats_v2', {
+      p_start_date: start,
+      p_end_date: end,
+      p_centro_custo: centroCusto,
+      p_representante: repIds.length > 0 ? repIds : null,
+      p_cliente: clientIds.length > 0 ? clientIds : null,
+      p_produto: productIds.length > 0 ? productIds : null
     });
 
-    // 6. Finalize (Calculate TM and Sort)
-    const result = Array.from(categoryMap.values()).map(cat => {
-      cat.TM = cat.QTDE_ITENS > 0 ? cat.VALOR_PEDIDO / cat.QTDE_ITENS : 0;
+    if (error) {
+      console.error('[SERVICE] Error calling get_product_stats_v2:', error);
+      throw error;
+    }
 
-      cat.items = cat.items.map(item => {
-        item.TM = item.QTDE_ITENS > 0 ? item.VALOR_PEDIDO / item.QTDE_ITENS : 0;
-        // Sort Level 3 (Orders) by Value Desc
-        item.orders.sort((a, b) => b.VALOR_TOTAL - a.VALOR_TOTAL);
-        return item;
-      });
-
-      // Sort Level 2 (Items) by Value Desc
-      cat.items.sort((a, b) => b.VALOR_PEDIDO - a.VALOR_PEDIDO);
-
-      return cat;
-    });
-
-    // Sort Level 1 (Categories) by Value Desc
-    return result.sort((a, b) => b.VALOR_PEDIDO - a.VALOR_PEDIDO);
+    // RPC returns the exact JSON structure we need
+    return data as import("./dashboardComercialTypes").ProductCategoryStat[];
 
   } catch (error) {
     console.error("[SERVICE] Error fetching Product Stats:", error);
@@ -1470,210 +1301,40 @@ export const fetchClientStats = async (
   produto: string[] = []
 ): Promise<import("./dashboardComercialTypes").ClientStat[]> => {
   try {
-    const formattedStartDate = format(startDate, 'yyyy-MM-dd 00:00:00');
-    const formattedEndDate = format(endDate, 'yyyy-MM-dd 23:59:59');
+    const start = format(startDate, 'yyyy-MM-dd 00:00:00');
+    const end = format(endDate, 'yyyy-MM-dd 23:59:59');
 
-    console.log(`[SERVICE] Buscando Stats de Clientes: ${formattedStartDate} até ${formattedEndDate}`);
+    console.log(`[SERVICE] Fetching Client Stats (RPC V2): ${start} to ${end}`);
 
-    const pageSize = 1000;
-    const maxRows = 300000;
+    const repIds = representative?.filter(r => r).map(Number).filter(n => !isNaN(n)) || [];
+    const clientIds = cliente?.filter(c => c).map(Number).filter(n => !isNaN(n)) || [];
+    const productIds = produto?.filter(p => p) || [];
 
-    // 1. Fetch Invoices with Chunking
-    let allInvoices: any[] = [];
-    let hasMoreInvoices = true;
-    let invPage = 0;
-
-    while (hasMoreInvoices && allInvoices.length < maxRows) {
-      const from = invPage * pageSize;
-      const to = from + pageSize - 1;
-
-      let query = supabase
-        .from('MV_BLUEBAY_FATURAMENTO_CENTRO_CUSTO')
-        .select('valor_nota, quantidade, pes_codigo, centrocusto, representante')
-        .gte('data_emissao', formattedStartDate)
-        .lte('data_emissao', formattedEndDate)
-        .neq('status_faturamento', '2') // Not Cancelled
-        .range(from, to);
-
-      if (centroCusto && centroCusto !== "none" && centroCusto !== "Não identificado") {
-        query = query.eq('centrocusto', centroCusto);
-      } else if (centroCusto === "Não identificado") {
-        query = query.is('centrocusto', null);
-      }
-
-      // Filter empty strings to avoid integer syntax errors
-      const validReps = representative ? representative.filter(r => r && r.trim() !== "") : [];
-      if (validReps.length > 0) {
-        query = query.in('representante', validReps);
-      }
-
-      const validClients = cliente ? cliente.filter(c => c && c.trim() !== "") : [];
-      if (validClients.length > 0) {
-        query = query.in('pes_codigo', validClients);
-      }
-
-
-      // Invoice view usually doesn't have item_codigo?
-      // Step 268 lines 1729 showed logic for Manual Calc.
-      // If invoice doesn't have item_codigo, we can't filter invoice by product.
-      // So ignore product for invoices, or use a better view.
-      // We will ignore for now as per `calcDashboardStats` logic?
-      // Actually `calcDashboardStats` (Step 271) REMOVED product filter from Invoice Query.
-      // So here too.
-
-      const { data: chunk, error } = await query;
-      if (error) throw error;
-      if (chunk && chunk.length > 0) {
-        allInvoices = [...allInvoices, ...chunk];
-        hasMoreInvoices = chunk.length === pageSize;
-        invPage++;
-      } else {
-        hasMoreInvoices = false;
-      }
-    }
-
-    // 2. Fetch Orders with Chunking
-    let allOrders: any[] = [];
-    let hasMoreOrders = true;
-    let ordPage = 0;
-
-    while (hasMoreOrders && allOrders.length < maxRows) {
-      const from = ordPage * pageSize;
-      const to = from + pageSize - 1;
-
-      let query = supabase
-        .from('BLUEBAY_PEDIDO')
-        .select('TOTAL_PRODUTO, QTDE_PEDIDA, VALOR_UNITARIO, PES_CODIGO, CENTROCUSTO, REPRESENTANTE, STATUS')
-        .gte('DATA_PEDIDO', formattedStartDate)
-        .lte('DATA_PEDIDO', formattedEndDate)
-        .neq('STATUS', '4') // Not Cancelled
-        .range(from, to);
-
-      if (centroCusto && centroCusto !== "none" && centroCusto !== "Não identificado") {
-        query = query.eq('CENTROCUSTO', centroCusto);
-      } else if (centroCusto === "Não identificado") {
-        query = query.is('CENTROCUSTO', null);
-      }
-
-      const validReps = representative ? representative.filter(r => r && r.trim() !== "") : [];
-      if (validReps.length > 0) {
-        query = query.in('REPRESENTANTE', validReps);
-      }
-
-      const validClients = cliente ? cliente.filter(c => c && c.trim() !== "") : [];
-      if (validClients.length > 0) {
-        query = query.in('PES_CODIGO', validClients);
-      }
-
-      const validProducts = produto ? produto.filter(p => p && p.trim() !== "") : [];
-      if (validProducts.length > 0) {
-        query = query.in('ITEM_CODIGO', validProducts);
-      }
-
-      const { data: chunk, error } = await query;
-      if (error) throw error;
-      if (chunk && chunk.length > 0) {
-        allOrders = [...allOrders, ...chunk];
-        hasMoreOrders = chunk.length === pageSize;
-        ordPage++;
-      } else {
-        hasMoreOrders = false;
-      }
-    }
-
-    const invoices = allInvoices;
-    const orders = allOrders;
-
-    console.log(`[SERVICE] ClientStats -> Query Results: Invoices=${invoices.length}, Orders=${orders.length}`);
-
-    // 3. Aggregate
-    const clientMap = new Map<number, import("./dashboardComercialTypes").ClientStat>();
-    const clientIds = new Set<number>();
-
-    const getClient = (id: number) => {
-      if (!clientMap.has(id)) {
-        clientMap.set(id, {
-          PES_CODIGO: String(id),
-          APELIDO: `Cliente ${id}`,
-          NOME_CATEGORIA: '-',
-          TOTAL_FATURADO: 0,
-          ITENS_FATURADOS: 0,
-          TM_ITEM_FATURADO: 0,
-          TOTAL_PEDIDO: 0,
-          ITENS_PEDIDOS: 0
-        });
-        clientIds.add(id);
-      }
-      return clientMap.get(id)!;
-    };
-
-    // Process Invoices
-    invoices.forEach((inv: any) => {
-      const id = Number(inv.pes_codigo);
-      if (!id || id === 0) return;
-
-      const client = getClient(id);
-      client.TOTAL_FATURADO += (Number(inv.valor_nota) || 0);
-      client.ITENS_FATURADOS += (Number(inv.quantidade) || 0);
+    const { data, error } = await supabase.rpc('get_client_stats_v2', {
+      p_start_date: start,
+      p_end_date: end,
+      p_centro_custo: centroCusto,
+      p_representante: repIds.length > 0 ? repIds : null,
+      p_cliente: clientIds.length > 0 ? clientIds : null,
+      p_produto: productIds.length > 0 ? productIds : null
     });
 
-    // Process Orders
-    orders.forEach((ord: any) => {
-      const id = Number(ord.PES_CODIGO);
-      if (!id || id === 0) return;
-
-      const client = getClient(id);
-      const qtde = Number(ord.QTDE_PEDIDA) || 0;
-      const valorUnit = Number(ord.VALOR_UNITARIO) || 0;
-      const totalProd = Number(ord.TOTAL_PRODUTO) || 0;
-      const val = totalProd > 0 ? totalProd : (qtde * valorUnit);
-
-      client.TOTAL_PEDIDO += val;
-      client.ITENS_PEDIDOS += qtde;
-    });
-
-    console.log(`[SERVICE] ClientStats -> Aggregated ${clientMap.size} unique clients.`);
-
-    // 4. Fetch Descriptions (Apelido)
-    if (clientIds.size > 0) {
-      const ids = Array.from(clientIds);
-      const batchSize = 100; // Smaller batches for safety
-
-      for (let i = 0; i < ids.length; i += batchSize) {
-        const batch = ids.slice(i, i + batchSize);
-        console.log(`[SERVICE] ClientStats -> Fetching batch ${i / batchSize + 1} for ${batch.length} people...`);
-
-        const { data: people, error: peopleError } = await supabase
-          .from('BLUEBAY_PESSOA')
-          .select('PES_CODIGO, APELIDO, NOME_CATEGORIA')
-          .in('PES_CODIGO', batch);
-
-        if (peopleError) {
-          console.error('[SERVICE] ClientStats -> People Batch Error:', peopleError);
-        }
-
-        console.log(`[SERVICE] ClientStats -> Found ${people?.length || 0} names in batch.`);
-
-        people?.forEach((p: any) => {
-          const c = clientMap.get(Number(p.PES_CODIGO));
-          if (c) {
-            c.APELIDO = p.APELIDO || c.APELIDO;
-            c.NOME_CATEGORIA = p.NOME_CATEGORIA || '-';
-          }
-        });
-      }
+    if (error) {
+      console.error('[SERVICE] Error calling get_client_stats_v2:', error);
+      throw error;
     }
 
-    // 5. Finalize Calcs and Sort
-    const result = Array.from(clientMap.values()).map(c => {
-      c.TM_ITEM_FATURADO = c.ITENS_FATURADOS > 0 ? c.TOTAL_FATURADO / c.ITENS_FATURADOS : 0;
-      return c;
-    });
-
-    console.log(`[SERVICE] ClientStats -> Returning ${result.length} clients to UI.`);
-
-    // Sort by Total Pedido Desc
-    return result.sort((a, b) => b.TOTAL_PEDIDO - a.TOTAL_PEDIDO);
+    // Map RPC columns to ClientStat interface
+    return (data || []).map((row: any) => ({
+      PES_CODIGO: String(row.pes_codigo),
+      APELIDO: row.apelido,
+      NOME_CATEGORIA: row.nome_categoria || '-',
+      TOTAL_FATURADO: Number(row.total_faturado || 0),
+      ITENS_FATURADOS: Number(row.total_itens_faturados || 0),
+      TM_ITEM_FATURADO: Number(row.ticket_medio_faturado || 0),
+      TOTAL_PEDIDO: Number(row.total_pedidos || 0),
+      ITENS_PEDIDOS: Number(row.total_itens_pedidos || 0)
+    }));
 
   } catch (error) {
     console.error('[SERVICE] Error fetching client stats:', error);

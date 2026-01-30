@@ -771,12 +771,25 @@ const RepresentativeAnalysis = () => {
                                     onChange={handleRepChange}
                                     fetchOptions={async (q) => {
                                         const { fetchActiveRepresentativesRPC } = await import("@/services/bluebay/dashboardComercialService");
-                                        const all = await fetchActiveRepresentativesRPC(24);
-                                        if (!q) return all;
-                                        return all.filter(r => r.label.toLowerCase().includes(q.toLowerCase()));
+
+                                        // Simple local cache to avoid re-fetching the entire list while searching
+                                        const cacheKey = 'rep_options_cache';
+                                        let allReps = (window as any)[cacheKey];
+
+                                        if (!allReps) {
+                                            allReps = await fetchActiveRepresentativesRPC(24);
+                                            (window as any)[cacheKey] = allReps;
+                                        }
+
+                                        if (!q) return allReps;
+                                        const search = q.toLowerCase();
+                                        return allReps.filter((r: any) =>
+                                            r.label.toLowerCase().includes(search) ||
+                                            r.value.includes(search)
+                                        );
                                     }}
                                     width="w-full"
-                                    placeholder="Buscar..."
+                                    placeholder="Buscar por nome ou ID..."
                                 />
                                 <ClientPortfolioDialog representativeId={selectedRepresentative[0] ? Number(selectedRepresentative[0]) : null} />
                             </div>
