@@ -114,6 +114,8 @@ export interface DashboardComercialStats {
     mediaValorItem: number;
     totalPedidosValue: number;
     totalPedidosQty: number;
+    totalPedidosCount?: number; // Added to support unique order count
+    totalPotencialPerdido?: number; // Added for Potencial Perdido KPI
   };
   costCenters: {
     nome: string;
@@ -206,4 +208,34 @@ export interface ClientStat {
   TM_ITEM_FATURADO: number;
   TOTAL_PEDIDO: number;
   ITENS_PEDIDOS: number;
+}
+
+export interface RepresentativeOrder {
+  MATRIZ: number;
+  FILIAL: number;
+  PED_NUMPEDIDO: string;
+  PED_ANOBASE: number;
+  PEDIDO_OUTRO: string;
+  DATA_PEDIDO: string;
+  STATUS: string;
+  QTDE_PEDIDA: number;
+  QTDE_ENTREGUE: number;
+  QTDE_SALDO: number;
+  VALOR_TOTAL: number;
+  APELIDO?: string;
+  RAZAOSOCIAL?: string;
+  PES_CODIGO_CLIENTE?: string; // Added for PDF
+}
+
+export interface RepresentativeOrderItem {
+  MATRIZ: number;
+  FILIAL: number;
+  PED_NUMPEDIDO: string;
+  ITEM_CODIGO: string;
+  DESCRICAO: string;
+  QTDE_PEDIDA: number;
+  QTDE_ENTREGUE: number;
+  QTDE_SALDO: number;
+  VALOR_UNITARIO: number;
+  VALOR_TOTAL: number;
 }

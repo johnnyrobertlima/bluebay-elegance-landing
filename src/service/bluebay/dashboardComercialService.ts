@@ -120,7 +120,8 @@ export const fetchDashboardStats = async (
         mediaValorItem: totals?.mediaValorItem || 0,
         totalPedidosValue: totals?.totalPedidosValue || mergedDaily.reduce((acc: number, d: any) => acc + (Number(d.pedidoTotal) || 0), 0),
         totalPedidosQty: totals?.totalPedidosQty || mergedDaily.reduce((acc: number, d: any) => acc + (Number(d.pedidoCount) || 0), 0),
-        totalPedidosCount: totals?.totalPedidosCount // Added
+        totalPedidosCount: totals?.totalPedidosCount, // Added
+        totalPotencialPerdido: totals?.totalPotencialPerdido || 0 // Added
       },
 
       costCenterStats: costCenters,
@@ -170,6 +171,206 @@ export const fetchRepresentativeClientMetrics = async (
   } catch (error) {
     console.error('[SERVICE] Unexpected error in fetchRepresentativeClientMetrics:', error);
     return { active_clients: 0, portfolio_clients: 0, new_clients: 0 };
+  }
+};
+
+/**
+ * Busca lista de pedidos detalhada para o respresentante
+ */
+export const fetchRepresentativeOrdersList = async (
+  representativeId: number,
+  startDate: Date,
+  endDate: Date
+): Promise<import("./dashboardComercialTypes").RepresentativeOrder[]> => {
+  try {
+    const start = format(startDate, 'yyyy-MM-dd 00:00:00');
+    const end = format(endDate, 'yyyy-MM-dd 23:59:59');
+
+    console.log(`[SERVICE] Fetching Orders List for Rep ${representativeId}: ${start} to ${end}`);
+
+    const { data, error } = await supabase.rpc('get_representative_orders_list', {
+      p_rep_id: representativeId,
+      p_start_date: start,
+      p_end_date: end
+    });
+
+    if (error) {
+      console.error('[SERVICE] Error calling get_representative_orders_list:', error);
+      return [];
+    }
+
+    return data as import("./dashboardComercialTypes").RepresentativeOrder[];
+
+  } catch (error) {
+    console.error('[SERVICE] Unexpected error in fetchRepresentativeOrdersList:', error);
+    return [];
+  }
+};
+
+/**
+ * Busca lista detalhada de faturamento para o modal
+ */
+export const fetchRepresentativeInvoices = async (
+  representativeId: number,
+  startDate: Date,
+  endDate: Date
+): Promise<any[]> => {
+  const start = format(startDate, 'yyyy-MM-dd 00:00:00');
+  const end = format(endDate, 'yyyy-MM-dd 23:59:59');
+
+  // 1. Fetch from MV
+  const { data: invoices, error } = await supabase
+    .from('MV_BLUEBAY_FATURAMENTO_CENTRO_CUSTO')
+    .select(`
+            data_emissao,
+            valor_nota,
+            pes_codigo,
+            nota,
+            razao_social,
+            apelido,
+            centrocusto
+        `)
+    .eq('representante', representativeId)
+    .gte('data_emissao', start)
+    .lte('data_emissao', end)
+    .neq('status_faturamento', '2') // Not Cancelled
+    .order('data_emissao', { ascending: false });
+
+  if (error) {
+    console.error('[SERVICE] Error fetching invoices:', error);
+    return [];
+  }
+
+  if (!invoices || invoices.length === 0) return [];
+
+  // 2. Fetch Person Details (Grupo/Categoria, Apelido, Razao)
+  const clientIds = [...new Set(invoices.map(i => i.pes_codigo).filter(id => id))];
+  let clientMap = new Map<number, { apelido: string; razao: string; grupo: string }>();
+
+  if (clientIds.length > 0) {
+    const { data: clients } = await supabase
+      .from('BLUEBAY_PESSOA')
+      .select('PES_CODIGO, APELIDO, RAZAOSOCIAL, NOME_CATEGORIA')
+      .in('PES_CODIGO', clientIds);
+
+    if (clients) {
+      clients.forEach(c => {
+        clientMap.set(c.PES_CODIGO, {
+          apelido: c.APELIDO,
+          razao: c.RAZAOSOCIAL,
+          grupo: c.NOME_CATEGORIA
+        });
+      });
+    }
+  }
+
+  // 3. Merge
+  return invoices.map(i => {
+    const client = clientMap.get(i.pes_codigo);
+    return {
+      ...i,
+      razaosocial: client?.razao || i.razao_social, // Prefer Pessoa table
+      apelido: client?.apelido || i.apelido,
+      grupo_economico: client?.grupo || 'Não Definido', // New field
+      centrocusto: i.centrocusto // Keep original just in case
+    };
+  });
+};
+
+/**
+ * Busca detalhes dos itens de um pedido específico
+ */
+export const fetchRepresentativeOrderItems = async (
+  matriz: number,
+  filial: number,
+  pedNumPedido: string,
+  pedAnoBase: number
+): Promise<import("./dashboardComercialTypes").RepresentativeOrderItem[]> => {
+  try {
+    // console.log(`[SERVICE] Fetching Items for Order: ${matriz}/${filial}/${pedNumPedido}/${pedAnoBase}`);
+
+    // Fetch items directly from BLUEBAY_PEDIDO
+    const { data: orderItems, error } = await supabase
+      .from('BLUEBAY_PEDIDO')
+      .select('*')
+      .eq('MATRIZ', matriz)
+      .eq('FILIAL', filial)
+      .eq('PED_NUMPEDIDO', pedNumPedido)
+      .eq('PED_ANOBASE', pedAnoBase)
+      .order('ITEM_CODIGO');
+
+    if (error) {
+      console.error('[SERVICE] Error fetching order items:', error);
+      return [];
+    }
+
+    if (!orderItems || orderItems.length === 0) {
+      return [];
+    }
+
+    // console.log(`[SERVICE] Found ${orderItems.length} items for order ${pedNumPedido}. First item:`, orderItems[0]);
+
+    // Fetch descriptions manually
+    const itemCodigos = orderItems.map((d: any) => d.ITEM_CODIGO).filter((c: any) => c);
+    let itemMap = new Map<string, string>();
+
+    if (itemCodigos.length > 0) {
+      const uniqueItemCodigos = [...new Set(itemCodigos)];
+      const { data: itemsData } = await supabase
+        .from('BLUEBAY_ITEM')
+        .select('ITEM_CODIGO, DESCRICAO')
+        .in('ITEM_CODIGO', uniqueItemCodigos);
+
+      if (itemsData) {
+        itemsData.forEach((i: any) => {
+          if (i.ITEM_CODIGO) itemMap.set(String(i.ITEM_CODIGO), i.DESCRICAO);
+        });
+      }
+    }
+
+    return orderItems.map((item: any) => ({
+      MATRIZ: item.MATRIZ,
+      FILIAL: item.FILIAL,
+      PED_NUMPEDIDO: String(item.PED_NUMPEDIDO),
+      ITEM_CODIGO: String(item.ITEM_CODIGO || ''),
+      DESCRICAO: itemMap.get(String(item.ITEM_CODIGO)) || 'Item sem descrição',
+      QTDE_PEDIDA: item.QTDE_PEDIDA || 0,
+      QTDE_ENTREGUE: item.QTDE_ENTREGUE || 0,
+      QTDE_SALDO: item.QTDE_SALDO || 0,
+      VALOR_UNITARIO: item.VALOR_UNITARIO || 0,
+      VALOR_TOTAL: (item.QTDE_PEDIDA || 0) * (item.VALOR_UNITARIO || 0)
+    }));
+
+  } catch (error) {
+    console.error('[SERVICE] Unexpected error in fetchRepresentativeOrderItems:', error);
+    return [];
+  }
+};
+
+/**
+ * Busca análise de carteira de clientes por ano
+ */
+export const fetchRepresentativeClientPortfolio = async (
+  representativeId: number,
+  startYear: number,
+  endYear: number
+): Promise<{ CLIENTE_ID: number; APELIDO: string; RAZAOSOCIAL: string; ANO: number; TOTAL_VALOR: number }[]> => {
+  try {
+    const { data, error } = await supabase.rpc('get_representative_client_portfolio', {
+      p_rep_id: representativeId,
+      p_start_year: startYear,
+      p_end_year: endYear
+    });
+
+    if (error) {
+      console.error('[SERVICE] Error calling get_representative_client_portfolio:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('[SERVICE] Unexpected error in fetchRepresentativeClientPortfolio:', error);
+    return [];
   }
 };
 
