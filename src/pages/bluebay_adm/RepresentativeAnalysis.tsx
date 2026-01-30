@@ -692,17 +692,31 @@ const RepresentativeAnalysis = () => {
             }
 
 
-            // --- Sheet 4: Nota no periodo (New) ---
+            // --- Sheet 4: Nota no periodo (Aggregated by Note) ---
             const invoices = await fetchInvoicesForExcel(repId, startDate, endDate);
 
-            const sheet4Data = invoices.map(inv => ({
-                'Data': inv.data_emissao ? format(new Date(inv.data_emissao), 'dd/MM/yyyy') : '',
-                'Nota': inv.nota || inv.id?.split('-')?.[1] || '',
-                'Grupo Econômico': inv.grupo_economico || 'N/A',
-                'Apelido': inv.apelido,
-                'Razão Social': inv.razaosocial,
-                'Valor Faturado': inv.valor_nota
-            }));
+            const invoicesMap = new Map<string, any>();
+
+            invoices.forEach(inv => {
+                const noteNumber = inv.nota || inv.id?.split('-')?.[1] || 'UNK';
+                const key = `${noteNumber}-${inv.apelido}`;
+
+                if (!invoicesMap.has(key)) {
+                    invoicesMap.set(key, {
+                        'Data': inv.data_emissao ? format(new Date(inv.data_emissao), 'dd/MM/yyyy') : '',
+                        'Nota': noteNumber,
+                        'Grupo Econômico': inv.grupo_economico || 'N/A',
+                        'Apelido': inv.apelido,
+                        'Razão Social': inv.razaosocial,
+                        'Valor Faturado': 0
+                    });
+                }
+
+                // Aggregate values
+                invoicesMap.get(key)['Valor Faturado'] += (Number(inv.valor_nota) || 0);
+            });
+
+            const sheet4Data = Array.from(invoicesMap.values());
 
 
             // Workbook Creation
@@ -904,7 +918,7 @@ const RepresentativeAnalysis = () => {
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm text-left">
-                                    <thead className="bg-slate-50 text-slate-500 font-medium"><tr><th className="px-6 py-4">Data</th><th className="px-6 py-4">Pedido</th><th className="px-6 py-4">Cliente</th><th className="px-6 py-4 text-right">Valor Total</th><th className="px-6 py-4 text-center">Status</th><th className="px-6 py-4 text-center">Ações</th></tr></thead>
+                                    <thead className="bg-slate-50 text-slate-500 font-medium"><tr><th className="px-6 py-4">Data</th><th className="px-6 py-4">Pedido</th><th className="px-6 py-4">Pedido Mercos</th><th className="px-6 py-4">Cliente</th><th className="px-6 py-4 text-right">Valor Total</th><th className="px-6 py-4 text-center">Status</th><th className="px-6 py-4 text-center">Ações</th></tr></thead>
                                     <tbody className="divide-y divide-slate-100">
                                         {ordersList.filter(o => {
                                             if (!showCancelledOrders && ['4', '5', '9'].includes(o.STATUS)) return false;
@@ -923,6 +937,7 @@ const RepresentativeAnalysis = () => {
                                                     <tr className="hover:bg-slate-50 transition-colors group cursor-pointer" onClick={() => handleExpandOrder(uniqueKey, order.MATRIZ, order.FILIAL, order.PED_NUMPEDIDO, order.PED_ANOBASE)}>
                                                         <td className="px-6 py-4 font-medium text-slate-600">{order.DATA_PEDIDO ? format(new Date(order.DATA_PEDIDO), 'dd/MM/yyyy') : '-'}</td>
                                                         <td className="px-6 py-4 font-bold text-slate-800">#{order.PED_NUMPEDIDO}</td>
+                                                        <td className="px-6 py-4 text-slate-600">{order.PEDIDO_OUTRO || '-'}</td>
                                                         <td className="px-6 py-4"><div className="font-bold text-slate-700">{order.APELIDO || 'N/A'}</div><div className="text-xs text-slate-400">{order.RAZAOSOCIAL?.substring(0, 30)}...</div></td>
                                                         <td className="px-6 py-4 text-right font-bold text-slate-800">{formatCurrency(order.VALOR_TOTAL)}</td>
                                                         <td className="px-6 py-4 text-center"><span className={`px-3 py-1 rounded-full text-xs font-bold ${statusColor} inline-block min-w-[80px]`}>{statusLabel}</span></td>

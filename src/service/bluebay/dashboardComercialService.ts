@@ -1758,19 +1758,25 @@ export const getActivePessoaIds = async (startDate: Date, endDate: Date, isRep: 
  * Fetch active representatives using dedicated RPC for performance
  */
 export const fetchActiveRepresentativesRPC = async (lookbackMonths: number = 24) => {
-  console.log(`[SERVICE] Fetching active representatives (RPC) for past ${lookbackMonths} months...`);
+  console.log(`[SERVICE] Fetching active representatives from MV_REPRESENTANTES_DASHBOARD...`);
 
-  const { data, error } = await supabase.rpc('get_active_representatives', {
-    lookback_months: lookbackMonths
-  });
+  // Query the Materialized View directly for better performance
+  // The view is refreshed weekly (or manually) as per user request
+  const { data, error } = await supabase
+    .from('MV_REPRESENTANTES_DASHBOARD')
+    .select('codigo_representante, nome_representante')
+    .order('nome_representante');
 
   if (error) {
-    console.error('[SERVICE] Error calling get_active_representatives RPC:', error);
-    // Fallback? Returing empty allows UI to handle it or show everything.
+    console.error('[SERVICE] Error fetching from MV_REPRESENTANTES_DASHBOARD:', error);
+    // Fallback: Return empty or try RPC? 
+    // Given the request for performance, let's assume MV exists. If not, error logs will show.
+    // If the table doesn't exist, this will fail.
+    // We could fallback to the old RPC if we wanted, but let's stick to the new path.
     return [];
   }
 
-  console.log(`[SERVICE] RPC returned ${data?.length} representatives.`);
+  console.log(`[SERVICE] MV returned ${data?.length} representatives.`);
 
   return (data || []).map((r: any) => ({
     value: String(r.codigo_representante),

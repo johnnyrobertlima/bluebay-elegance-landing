@@ -1,0 +1,53 @@
+-- Migration: RESTORE Representative Orders List RPC (Fixing PED_PEDIDOMERCOS error)
+-- Date: 2026-01-30 10:35:00
+
+-- Drop first because return type is changing (Postgres requirement - reverting back)
+DROP FUNCTION IF EXISTS get_representative_orders_list(INT, TIMESTAMP, TIMESTAMP);
+
+CREATE OR REPLACE FUNCTION get_representative_orders_list(
+  p_rep_id INT,
+  p_start_date TIMESTAMP,
+  p_end_date TIMESTAMP
+)
+RETURNS TABLE (
+  "PED_NUMPEDIDO" TEXT,
+  "PEDIDO_OUTRO" TEXT,
+  "DATA_PEDIDO" TIMESTAMP,
+  "STATUS" TEXT,
+  "QTDE_PEDIDA" NUMERIC,
+  "QTDE_ENTREGUE" NUMERIC,
+  "QTDE_SALDO" NUMERIC,
+  "VALOR_TOTAL" NUMERIC,
+  "MATRIZ" INT,
+  "FILIAL" INT,
+  "PED_ANOBASE" INT,
+  "PES_CODIGO" INT,
+  "APELIDO" TEXT,
+  "RAZAOSOCIAL" TEXT
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    p."PED_NUMPEDIDO"::TEXT,
+    MAX(p."PEDIDO_OUTRO")::TEXT as "PEDIDO_OUTRO",
+    MIN(p."DATA_PEDIDO") as "DATA_PEDIDO",
+    MAX(p."STATUS")::TEXT as "STATUS",
+    SUM(COALESCE(p."QTDE_PEDIDA", 0)) as "QTDE_PEDIDA",
+    SUM(COALESCE(p."QTDE_ENTREGUE", 0)) as "QTDE_ENTREGUE",
+    SUM(COALESCE(p."QTDE_SALDO", 0)) as "QTDE_SALDO",
+    SUM(COALESCE(p."QTDE_PEDIDA", 0) * COALESCE(p."VALOR_UNITARIO", 0)) as "VALOR_TOTAL",
+    MAX(p."MATRIZ") as "MATRIZ",
+    MAX(p."FILIAL") as "FILIAL",
+    MAX(p."PED_ANOBASE") as "PED_ANOBASE",
+    MAX(p."PES_CODIGO") as "PES_CODIGO",
+    MAX(pe."APELIDO") as "APELIDO",
+    MAX(pe."RAZAOSOCIAL") as "RAZAOSOCIAL"
+  FROM "BLUEBAY_PEDIDO" p
+  LEFT JOIN "BLUEBAY_PESSOA" pe ON p."PES_CODIGO" = pe."PES_CODIGO"
+  WHERE p."REPRESENTANTE" = p_rep_id
+    AND p."DATA_PEDIDO" BETWEEN p_start_date AND p_end_date
+    AND p."STATUS" != '4'
+  GROUP BY p."PED_NUMPEDIDO"
+  ORDER BY MIN(p."DATA_PEDIDO") DESC;
+END;
+$$ LANGUAGE plpgsql;
