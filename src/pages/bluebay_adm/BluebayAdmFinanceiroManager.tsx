@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from "react";
-import { BluebayAdmBanner } from "@/components/bluebay_adm/BluebayAdmBanner";
 import { BluebayAdmMenu } from "@/components/bluebay_adm/BluebayAdmMenu";
 import { FinancialHeader } from "@/components/bluebay_adm/financial/FinancialHeader";
 import { FinancialLoader } from "@/components/bluebay_adm/financial/FinancialLoader";
@@ -16,14 +15,14 @@ import { Button } from "@/components/ui/button";
 
 const BluebayAdmFinanceiroManager = () => {
   // Use our custom hooks to separate concerns
-  const { 
-    isLoading, 
+  const {
+    isLoading,
     isLoadingMore,
     hasMorePages,
     filteredInvoices,
     filteredTitles,
-    refreshData, 
-    dateRange, 
+    refreshData,
+    dateRange,
     updateDateRange,
     statusFilter,
     updateStatusFilter,
@@ -87,17 +86,16 @@ const BluebayAdmFinanceiroManager = () => {
     const loadInitialData = async () => {
       await refreshData();
     };
-    
+
     loadInitialData();
   }, [refreshData]);
 
   return (
     <main className="container-fluid p-0 max-w-full">
-      <BluebayAdmBanner />
       <BluebayAdmMenu />
-      
+
       <div className="container mx-auto px-4 py-8">
-        <FinancialHeader 
+        <FinancialHeader
           title="Financeiro Bluebay"
           onRefresh={refreshData}
           onExport={handleExportToExcel}
@@ -106,7 +104,7 @@ const BluebayAdmFinanceiroManager = () => {
           hasData={hasData}
         />
 
-        <FinancialSummaryCalculator 
+        <FinancialSummaryCalculator
           filteredTitles={filteredTitles}
           selectedClient={selectedClient}
           onSummaryCalculated={setFilteredSummary}
@@ -141,7 +139,7 @@ const BluebayAdmFinanceiroManager = () => {
             onResetCollectionStatus={resetClientCollectionStatus}
             onResetAllCollectionStatus={resetAllCollectionStatus}
           />
-          
+
           <PaginationControls
             pagination={pagination}
             itemCount={clientFilteredTitles.length}
@@ -152,10 +150,10 @@ const BluebayAdmFinanceiroManager = () => {
               <div className="text-sm text-gray-500">Carregando mais dados...</div>
             </div>
           )}
-          
+
           {!isLoading && hasMorePages && (
             <div className="flex justify-center my-4">
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => refreshData()}
                 disabled={isLoadingMore}

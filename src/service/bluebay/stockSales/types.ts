@@ -7,6 +7,7 @@ export interface StockItem {
   ITEM_CODIGO: string;
   DESCRICAO: string;
   GRU_DESCRICAO: string;
+  EMPRESA_NOME?: string; // Added for company filtering
   DATACADASTRO: string | null;
   FISICO: number;
   DISPONIVEL: number;

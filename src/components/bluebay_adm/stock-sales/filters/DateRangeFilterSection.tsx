@@ -31,10 +31,9 @@ export const DateRangeFilterSection: React.FC<DateRangeFilterSectionProps> = ({
 
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-medium text-gray-700">Período de Venda</h3>
-      <DatePickerWithRange 
-        dateRange={calendarDateRange} 
-        onDateRangeChange={handleDateRangeChange} 
+      <DatePickerWithRange
+        dateRange={calendarDateRange}
+        onDateRangeChange={handleDateRangeChange}
       />
     </div>
   );

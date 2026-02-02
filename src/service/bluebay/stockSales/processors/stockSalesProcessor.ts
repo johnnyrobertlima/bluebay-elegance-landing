@@ -14,9 +14,10 @@ import { calculateDateDiffInDays } from "../utils/dateUtils";
  * Process stock and sales data from direct queries
  */
 export const processStockAndSalesData = (
-  stockItems: any[], 
+  stockItems: any[],
   salesData: any[],
   costData: any[],
+  itemDetailsList: any[],
   newProductDate: string,
   startDate: string,
   endDate: string
@@ -28,18 +29,18 @@ export const processStockAndSalesData = (
   // Process cost data to create a lookup map
   logDebugInfo("Processando dados de custo...");
   const processedCostData = processCostData(costData);
-  
+
   // Calculate date range for average daily sales
   const daysDiff = calculateDateDiffInDays(startDate, endDate);
   logDebugInfo(`Período de análise: ${daysDiff} dias entre ${startDate} e ${endDate}`);
-  
+
   // Track processed item codes to avoid duplicates
   const processedItemCodes = new Set<string>();
-  
+
   // Create a map of item details for lookup
   logDebugInfo("Criando mapa de detalhes dos itens...");
-  const itemDetailsMap = createItemDetailsMap(stockItems);
-  
+  const itemDetailsMap = createItemDetailsMap(itemDetailsList);
+
   // Process stock items with sales data
   logDebugInfo("Mapeando itens de estoque com dados de venda...");
   const processedItems = mapStockItems(
@@ -51,7 +52,7 @@ export const processStockAndSalesData = (
     newProductDate,
     processedItemCodes
   );
-  
+
   // Assign rankings and return the result
   logDebugInfo(`Atribuindo rankings a ${processedItems.length} itens...`);
   return assignRankings(processedItems);

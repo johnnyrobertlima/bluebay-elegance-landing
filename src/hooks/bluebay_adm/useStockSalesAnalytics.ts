@@ -1,5 +1,4 @@
-
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { useStockSalesData } from "./stock-sales/useStockSalesData";
 import { useStockSalesFilters } from "./stock-sales/useStockSalesFilters";
 import { useStockSalesSort } from "./stock-sales/useStockSalesSort";
@@ -8,24 +7,17 @@ import { useStockSalesSummary } from "./stock-sales/useStockSalesSummary";
 
 export type { DateRange } from "./stock-sales/useStockSalesFilters";
 
-export const useStockSalesAnalytics = () => {
-  // Data loading and management
-  const { 
-    isLoading, 
-    items, 
-    error,
-    dateRange, 
-    updateDateRange,
-    refreshData,
-    usingSampleData
-  } = useStockSalesData();
-
-  // Filters management
+export const useStockSalesAnalytics = (requireSearch: boolean = true) => {
+  // 1. Filters management (Must come before data hook to pass parameters)
   const {
-    searchTerm,
-    setSearchTerm,
+    searchTerms,
+    setSearchTerms,
+    addSearchTerm,
+    removeSearchTerm,
     groupFilter,
     setGroupFilter,
+    companyFilter,
+    setCompanyFilter,
     minCadastroYear,
     setMinCadastroYear,
     showZeroStock,
@@ -41,14 +33,33 @@ export const useStockSalesAnalytics = () => {
     clearFilters
   } = useStockSalesFilters();
 
+  // 2. Data loading and management (Passes filters to DB query)
+  const {
+    isLoading,
+    items,
+    error,
+    dateRange,
+    updateDateRange,
+    refreshData,
+    usingSampleData
+  } = useStockSalesData(
+    searchTerms,
+    groupFilter,
+    companyFilter,
+    minCadastroYear,
+    showZeroStock,
+    showLowStock,
+    showNewProducts
+  );
   // Sorting functionality
   const { sortConfig, handleSort, sortItems } = useStockSalesSort();
 
   // Filter the items
   const { filteredItems } = useStockSalesFiltering(
     items,
-    searchTerm,
+    searchTerms,
     groupFilter,
+    companyFilter,
     minCadastroYear,
     showZeroStock,
     showLowStock,
@@ -59,9 +70,9 @@ export const useStockSalesAnalytics = () => {
   const { getSummaryStats } = useStockSalesSummary(filteredItems);
 
   // Update available groups when items change
-  useMemo(() => {
+  useEffect(() => {
     updateAvailableGroups(items);
-  }, [items]);
+  }, [items, updateAvailableGroups]);
 
   // Sort the filtered items
   const sortedFilteredItems = useMemo(() => {
@@ -74,10 +85,14 @@ export const useStockSalesAnalytics = () => {
     error,
     dateRange,
     updateDateRange,
-    searchTerm,
-    setSearchTerm,
+    searchTerms,
+    setSearchTerms,
+    addSearchTerm,
+    removeSearchTerm,
     groupFilter,
     setGroupFilter,
+    companyFilter,
+    setCompanyFilter,
     availableGroups,
     sortConfig,
     handleSort,

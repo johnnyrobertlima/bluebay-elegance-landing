@@ -12,11 +12,18 @@ import { handleApiError } from "./errorHandlingService";
  */
 export const fetchStockSalesAnalytics = async (
   startDate: string,
-  endDate: string
+  endDate: string,
+  searchTerms?: string[],
+  groupFilter?: string,
+  companyFilter?: string,
+  minYear?: number,
+  showZeroStock: boolean = true,
+  showLowStock: boolean = false,
+  showNewProducts: boolean = false
 ): Promise<StockItem[]> => {
   try {
     logAnalyticsRequest(startDate, endDate);
-    return await attemptDataFetching(startDate, endDate);
+    return await attemptDataFetching(startDate, endDate, searchTerms, groupFilter, companyFilter, minYear, showZeroStock, showLowStock, showNewProducts);
   } catch (error) {
     return handleDataFetchingError(error);
   }
@@ -36,18 +43,25 @@ const logAnalyticsRequest = (startDate: string, endDate: string): void => {
  * Attempts to fetch data using different strategies
  */
 const attemptDataFetching = async (
-  startDate: string, 
-  endDate: string
+  startDate: string,
+  endDate: string,
+  searchTerms?: string[],
+  groupFilter?: string,
+  companyFilter?: string,
+  minYear?: number,
+  showZeroStock: boolean = true,
+  showLowStock: boolean = false,
+  showNewProducts: boolean = false
 ): Promise<StockItem[]> => {
   try {
     console.log("Tentando buscar dados via RPC...");
     // Try to use the RPC method first
-    return await fetchStockSalesViaRpc(startDate, endDate);
+    return await fetchStockSalesViaRpc(startDate, endDate, searchTerms, groupFilter, companyFilter, minYear, showZeroStock, showLowStock, showNewProducts);
   } catch (error) {
     // Log the specific RPC error
     console.error("Erro ao carregar dados via RPC:", error);
     console.log("Tentando método alternativo com consultas diretas...");
-    
+
     // If RPC fails, try the direct queries method
     return await fallbackToDirectQueries(startDate, endDate);
   }
@@ -59,7 +73,7 @@ const attemptDataFetching = async (
 const handleDataFetchingError = (error: unknown): StockItem[] => {
   // Use the error handling service to log detailed error information
   handleApiError("Erro ao carregar dados de estoque-vendas", error);
-  
+
   // Return sample data as a last resort
   return generateSampleStockData();
 };

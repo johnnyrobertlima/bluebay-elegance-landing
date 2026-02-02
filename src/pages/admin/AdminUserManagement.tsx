@@ -71,9 +71,19 @@ const AdminUserManagement = () => {
         }
     }, [user, isAdmin]);
 
+    const [screenSecurity, setScreenSecurity] = useState(true);
+
     const loadData = async () => {
         try {
             setIsLoading(true);
+
+            // 0. Load App Config (Screen Security)
+            const { data: configData } = await (supabase as any)
+                .rpc("get_app_config", { p_key: 'screen_security_enabled' });
+
+            if (configData !== null) {
+                setScreenSecurity(configData);
+            }
 
             // 1. Load Groups
             const { data: groupsData, error: groupsError } = await (supabase as any)
@@ -503,19 +513,35 @@ const AdminUserManagement = () => {
     return (
         <div className="min-h-screen bg-background">
             <div className="container mx-auto py-8 px-4">
-                <div className="flex items-center gap-4 mb-8">
-                    <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}>
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                    <div>
-                        <h1 className="text-3xl font-bold flex items-center gap-2">
-                            <Users className="h-6 w-6 text-primary" />
-                            Gestão de Usuários
-                        </h1>
-                        <p className="text-muted-foreground">
-                            Gerencie os grupos e status dos usuários
-                        </p>
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-4">
+                        <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}>
+                            <ArrowLeft className="h-5 w-5" />
+                        </Button>
+                        <div>
+                            <h1 className="text-3xl font-bold flex items-center gap-2">
+                                <Users className="h-6 w-6 text-primary" />
+                                Gestão de Usuários
+                            </h1>
+                            <p className="text-muted-foreground">
+                                Gerencie os grupos e status dos usuários
+                            </p>
+                        </div>
                     </div>
+
+                    <Button
+                        onClick={async () => {
+                            const newValue = !screenSecurity;
+                            setScreenSecurity(newValue);
+                            await (supabase as any).rpc("set_app_config", { p_key: 'screen_security_enabled', p_value: newValue });
+                            toast({ title: `Segurança de tela ${newValue ? 'LIGADA' : 'DESLIGADA'}` });
+                        }}
+                        variant={screenSecurity ? "default" : "destructive"}
+                        className={cn("gap-2", screenSecurity ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700")}
+                    >
+                        {screenSecurity ? <UserCheck className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+                        Segurança de Tela: {screenSecurity ? "LIGADO" : "DESLIGADO"}
+                    </Button>
                 </div>
 
                 <Card>

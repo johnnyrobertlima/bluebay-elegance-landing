@@ -1,6 +1,5 @@
 
 import { useState } from "react";
-import { BluebayAdmBanner } from "@/components/bluebay_adm/BluebayAdmBanner";
 import { BluebayAdmMenu } from "@/components/bluebay_adm/BluebayAdmMenu";
 import { useStockSalesAnalytics } from "@/hooks/bluebay_adm/useStockSalesAnalytics";
 import { StockSalesFilters } from "@/components/bluebay_adm/stock-sales/StockSalesFilters";
@@ -9,15 +8,19 @@ import { StockSalesSummary } from "@/components/bluebay_adm/stock-sales/StockSal
 import { StockSalesLegend } from "@/components/bluebay_adm/stock-sales/StockSalesLegend";
 
 const BluebayAdmStockSalesAnalytics = () => {
-  const { 
-    isLoading, 
-    items, 
-    dateRange, 
+  const {
+    isLoading,
+    items,
+    dateRange,
     updateDateRange,
-    searchTerm,
-    setSearchTerm,
+    searchTerms,
+    setSearchTerms,
+    addSearchTerm,
+    removeSearchTerm,
     groupFilter,
     setGroupFilter,
+    companyFilter,
+    setCompanyFilter,
     availableGroups,
     sortConfig,
     handleSort,
@@ -29,29 +32,37 @@ const BluebayAdmStockSalesAnalytics = () => {
     setMinCadastroYear,
     showZeroStock,
     setShowZeroStock,
+    showLowStock,
+    setShowLowStock,
     filterLowStock,
+    showNewProducts,
+    setShowNewProducts,
     filterNewProducts
   } = useStockSalesAnalytics();
 
+  const [showAdditionalFilters, setShowAdditionalFilters] = useState(true);
+
   return (
     <main className="container-fluid p-0 max-w-full">
-      <BluebayAdmBanner />
       <BluebayAdmMenu />
-      
+
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <h1 className="text-3xl font-bold tracking-tight mb-4 md:mb-0">Análise de Estoque vs Vendas</h1>
           </div>
-          
+
           <div className="space-y-6">
-            <StockSalesFilters 
+            <StockSalesFilters
               dateRange={dateRange}
               onDateRangeChange={updateDateRange}
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
+              searchTerms={searchTerms}
+              onAddSearchTerm={addSearchTerm}
+              onRemoveSearchTerm={removeSearchTerm}
               groupFilter={groupFilter}
               onGroupFilterChange={setGroupFilter}
+              companyFilter={companyFilter}
+              onCompanyFilterChange={setCompanyFilter}
               availableGroups={availableGroups}
               onRefresh={refreshData}
               onClearFilters={clearFilters}
@@ -60,18 +71,22 @@ const BluebayAdmStockSalesAnalytics = () => {
               onMinCadastroYearChange={setMinCadastroYear}
               showZeroStock={showZeroStock}
               onShowZeroStockChange={setShowZeroStock}
+              showAdditionalFilters={showAdditionalFilters}
+              onToggleAdditionalFilters={() => setShowAdditionalFilters(!showAdditionalFilters)}
             />
-            
-            <StockSalesSummary 
-              stats={getSummaryStats()} 
-              usingSampleData={usingSampleData}
-              onFilterLowStock={filterLowStock}
-              onFilterNewProducts={filterNewProducts}
-            />
-            
+
+            {showAdditionalFilters && (
+              <StockSalesSummary
+                stats={getSummaryStats()}
+                usingSampleData={usingSampleData}
+                onFilterLowStock={filterLowStock}
+                onFilterNewProducts={filterNewProducts}
+              />
+            )}
+
             <div className="bg-white shadow rounded-lg overflow-hidden border">
               <div className="p-4 sm:p-6">
-                <StockSalesAnalyticsTable 
+                <StockSalesAnalyticsTable
                   items={items}
                   isLoading={isLoading}
                   sortConfig={sortConfig}
@@ -79,7 +94,7 @@ const BluebayAdmStockSalesAnalytics = () => {
                 />
               </div>
             </div>
-            
+
             <StockSalesLegend />
           </div>
         </div>

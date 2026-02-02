@@ -65,7 +65,7 @@ export const bluebayAdmRoutes = (
     } />
     <Route path="/client-area/bluebay_adm/financial" element={
       <PermissionGuard resourcePath="/client-area/bluebay_adm/financial">
-        <BluebayAdmFinancial />
+        <BluebayAdmFinanceiroManager />
       </PermissionGuard>
     } />
     <Route path="/client-area/bluebay_adm/estoque" element={
