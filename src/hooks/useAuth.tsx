@@ -52,15 +52,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const currentFetchId = ++fetchCounter.current;
 
     // MEMOIZATION CHECK: If we already fetched for this user and have roles, skip unless forced.
-    // We use Refs to avoid stale closure issues in onAuthStateChange callback.
     if (!force && userId === lastFetchedUserIdRef.current && hasRolesLoadedRef.current) {
       console.log(`[AUTH] [#${currentFetchId}] Skipping: Roles already loaded for user ${userId.substring(0, 4)}...`);
-      setLoading(false); // Ensure we are not stuck
+      setLoading(false);
       return;
     }
 
-    // OPTIMISTIC LOAD (Universal): Try to load from localStorage to unblock UI immediately
-    // This runs for INITIAL_LOAD, SIGNED_IN, and VISIBILITY_CHANGE if not memoized.
+    // OPTIMISTIC LOAD: Try to load from localStorage
     if (!hasRolesLoadedRef.current) {
       try {
         const cached = localStorage.getItem('bluebay_auth_metadata');
@@ -71,14 +69,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUserRoles(meta.userRoles);
             setAllowedPaths(meta.allowedPaths);
             setHomePage(meta.homePage);
-            setLoading(false); // Unblock UI immediately!
 
             // Mark as loaded so we don't flicker
             hasRolesLoadedRef.current = true;
-            // Mark as fetched so subsequent calls (e.g. SIGNED_IN) skip redundant RPCs
             lastFetchedUserIdRef.current = userId;
 
             console.log(`[AUTH] [#${currentFetchId}] Optimistic load from cache successful.`);
+
+            // IMPORTANT: Unblock UI immediately
+            setLoading(false);
           }
         }
       } catch (e) {
@@ -86,100 +85,97 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    // 0. Check visibility state to adjust timeout strategy (Browser throttles background tabs)
-    const isHidden = document.hidden;
+    // DECISION: Block or Background?
+    // If we have roles loaded (from cache or previous fetch), we run validation in BACKGROUND.
+    // If we have nothing, we MUST AWAIT (block) to prevent unauthorized access or flickering.
+    const runInBackground = hasRolesLoadedRef.current;
 
-    try {
-      // FAST CHECK: If security is OFF and we are hidden, return immediately (Synchronous)
-      if (isHidden && screenSecurityEnabledRef.current === false) {
-        console.log(`[AUTH] [#${currentFetchId}] Skipped (Screen Security OFF + Hidden)`);
-        // Do not fetch, do not invalidate.
-        // Just ensure loading is false so UI shows whatever state we have.
-        return;
-      }
+    // The core validation logic
+    const performRpcCheck = async () => {
+      const isHidden = document.hidden;
 
-      console.log(`[AUTH] [#${currentFetchId}] fetchUserRolesAndPermissions - Hidden: ${isHidden}, Force: ${force}`);
+      try {
+        // FAST CHECK: If security is OFF and we are hidden, return immediately
+        if (isHidden && screenSecurityEnabledRef.current === false) {
+          console.log(`[AUTH] [#${currentFetchId}] Skipped (Screen Security OFF + Hidden)`);
+          return;
+        }
 
-      // Use a single SECURITY DEFINER RPC
-      // Increased timeouts to tolerate slow networks/databases
-      const TIMEOUT_MS = isHidden ? 60000 : 15000;
+        console.log(`[AUTH] [#${currentFetchId}] fetchUserRolesAndPermissions (RPC) - Hidden: ${isHidden}, Force: ${force}, Background: ${runInBackground}`);
 
-      const fetchPromise = (supabase as any).rpc("get_user_auth_metadata", { p_user_id: userId });
+        const TIMEOUT_MS = isHidden ? 60000 : 15000;
+        const fetchPromise = (supabase as any).rpc("get_user_auth_metadata", { p_user_id: userId });
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Auth metadata timeout")), TIMEOUT_MS)
+        );
 
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Auth metadata timeout")), TIMEOUT_MS)
-      );
+        const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
-      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+        if (error) throw error;
 
-      if (error) throw error;
+        if (data) {
+          // Verify if we are still the relevant fetch
+          if (currentFetchId !== fetchCounter.current) return;
 
-      if (data) {
-        const authMetadata = {
-          isAdmin: data.is_admin,
-          userRoles: data.is_admin ? ["user", "admin"] : ["user"],
-          allowedPaths: data.allowed_paths || [],
-          homePage: data.home_page || "/"
-        };
+          const authMetadata = {
+            isAdmin: data.is_admin,
+            userRoles: data.is_admin ? ["user", "admin"] : ["user"],
+            allowedPaths: data.allowed_paths || [],
+            homePage: data.home_page || "/"
+          };
 
-        setIsAdmin(authMetadata.isAdmin);
-        setUserRoles(authMetadata.userRoles as AppRole[]);
-        setAllowedPaths(authMetadata.allowedPaths);
-        setHomePage(authMetadata.homePage);
+          // Apply updates
+          setIsAdmin(authMetadata.isAdmin);
+          setUserRoles(authMetadata.userRoles as AppRole[]);
+          setAllowedPaths(authMetadata.allowedPaths);
+          setHomePage(authMetadata.homePage);
 
-        // CACHE: Save to localStorage for instant load next time
-        localStorage.setItem('bluebay_auth_metadata', JSON.stringify(authMetadata));
+          // Update cache
+          localStorage.setItem('bluebay_auth_metadata', JSON.stringify(authMetadata));
+          lastFetchedUserIdRef.current = userId;
+          hasRolesLoadedRef.current = true;
 
-        // Mark as cached
-        lastFetchedUserIdRef.current = userId;
-        hasRolesLoadedRef.current = true;
+          console.log(`[AUTH] [#${currentFetchId}] RPC Metadata validated.`);
+        }
+      } catch (err: any) {
+        if (currentFetchId !== fetchCounter.current) return;
 
-        console.log(`[AUTH] [#${currentFetchId}] Metadata loaded (and cached):`, {
-          isAdmin: data.is_admin,
-          homePage: data.home_page,
-          pathsCount: data.allowed_paths?.length
-        });
-      }
-    } catch (err: any) {
-      if (currentFetchId !== fetchCounter.current) {
-        console.log(`[AUTH] [#${currentFetchId}] Ignored error (replaced)`);
-        return;
-      }
+        // Ignore AbortErrors and Timeouts in Resilient Mode
+        if (err.name === 'AbortError') return;
 
-      // Ignore AbortErrors
-      if (err.name === 'AbortError') {
-        console.log(`[AUTH] [#${currentFetchId}] Request aborted.`);
-        return;
-      }
+        // If it's a timeout and we are in background mode (already have roles), just log warning
+        if (err.message === 'Auth metadata timeout' && hasRolesLoadedRef.current) {
+          console.warn(`[AUTH] [#${currentFetchId}] Timeout in background validation. Keeping existing session.`);
+          return;
+        }
 
-      // RESILIENCE: If it's a timeout and we already have roles (via Ref), allow "stale" state.
-      // This uses Ref to be safe against stale closures too.
-      // Actually userRoles state might be stale here too if closure is stale? 
-      // Yes! 'fetchUserRolesAndPermissions' is stale.
-      // BUT hasRolesLoadedRef is mutable and fresh.
-      if ((err.message === 'Auth metadata timeout') && hasRolesLoadedRef.current) {
-        console.warn(`[AUTH] [#${currentFetchId}] Timeout, but keeping existing session state (Resilient Mode).`);
-      } else {
         console.error("[AUTH] Error in fetchUserRolesAndPermissions:", err);
 
-        // Only invalidate if we really failed hard and have no fallback
+        // Only invalidate if we are NOT in background mode (i.e. we truly failed to load anything)
+        // If we are in background mode, we keep the stale (cached) data rather than crashing the UI.
         if (!hasRolesLoadedRef.current) {
-          // Check if we have localStorage backup before failing? 
-          // Actually, we usually load LS at start. If we are here, it means LS might be empty or we failed re-verify.
-
           setIsAdmin(false);
           setUserRoles(["user"]);
           setAllowedPaths([]);
           setHomePage("/");
-          localStorage.removeItem('bluebay_auth_metadata'); // Clear bad cache
+          localStorage.removeItem('bluebay_auth_metadata');
           hasRolesLoadedRef.current = false;
         }
+      } finally {
+        // Ensure loading is cleared if we were blocking
+        if (!runInBackground && currentFetchId === fetchCounter.current) {
+          setLoading(false);
+          console.log(`[AUTH] [#${currentFetchId}] Loading set to false (Blocking finished).`);
+        }
       }
-    } finally {
-      if (currentFetchId === fetchCounter.current) {
-        setLoading(false);
-        console.log(`[AUTH] [#${currentFetchId}] Loading set to false.`);
-      }
+    };
+
+    if (runInBackground) {
+      // STALE-WHILE-REVALIDATE: Fire and forget
+      performRpcCheck();
+    } else {
+      // BLOCKING: Wait for result
+      await performRpcCheck();
     }
   };
 

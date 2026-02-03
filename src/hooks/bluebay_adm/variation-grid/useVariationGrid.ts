@@ -11,7 +11,7 @@ import { saveVariationGrid } from "@/services/bluebay_adm/variationGridService";
 export const useVariationGrid = (itemCode: string) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  
+
   // Get variation data (colors, sizes, existing variations)
   const {
     colors,
@@ -22,7 +22,7 @@ export const useVariationGrid = (itemCode: string) => {
     itemDetails,
     refreshExistingVariations
   } = useVariationData(itemCode);
-  
+
   // Get selection state management
   const {
     selectedColors,
@@ -36,7 +36,7 @@ export const useVariationGrid = (itemCode: string) => {
   } = useSelectionState(colors, sizes, existingVariations);
 
   // Handle saving the grid
-  const handleSaveGrid = async () => {
+  const handleSaveGrid = async (autoAssignEan: boolean = false) => {
     if (!itemCode) {
       toast({
         variant: "destructive",
@@ -55,23 +55,28 @@ export const useVariationGrid = (itemCode: string) => {
       return null;
     }
 
+    // Map selected IDs back to full objects
+    const selectedColorObjects = colors.filter(c => selectedColors.includes(c.id));
+    const selectedSizeObjects = sizes.filter(s => selectedSizes.includes(s.id));
+
     setIsLoading(true);
     try {
       const result = await saveVariationGrid(
         itemCode,
-        selectedColors,
-        selectedSizes,
-        existingVariations
+        selectedColorObjects,
+        selectedSizeObjects,
+        existingVariations,
+        autoAssignEan
       );
-      
+
       // Refresh variations after save
       await refreshExistingVariations();
-      
+
       toast({
         title: "Grade atualizada",
         description: `Adicionadas: ${result.added}, Removidas: ${result.removed}`,
       });
-      
+
       return result;
     } catch (error: any) {
       console.error("Error saving grid:", error);

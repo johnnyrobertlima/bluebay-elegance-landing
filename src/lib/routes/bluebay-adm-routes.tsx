@@ -25,6 +25,7 @@ import GestaoRelatorios from "@/pages/bluebay_adm/GestaoRelatorios";
 import BluebayAdmSeasonPerformance from "@/pages/bluebay_adm/BluebayAdmSeasonPerformance";
 import BluebayAdmWalletManagement from "@/pages/bluebay_adm/BluebayAdmWalletManagement";
 import BluebayAdmDashboardDiretoria from "@/pages/bluebay_adm/BluebayAdmDashboardDiretoria";
+import EANMaintenance from "@/pages/bluebay_adm/EANMaintenance";
 
 export const bluebayAdmRoutes = (
   <>
@@ -141,6 +142,11 @@ export const bluebayAdmRoutes = (
     <Route path="/client-area/bluebay_adm/analise-representante" element={
       <PermissionGuard resourcePath="/client-area/bluebay_adm/analise-representante">
         <RepresentativeAnalysis />
+      </PermissionGuard>
+    } />
+    <Route path="/client-area/bluebay_adm/ean-maintenance" element={
+      <PermissionGuard resourcePath="/client-area/bluebay_adm/ean-maintenance">
+        <EANMaintenance />
       </PermissionGuard>
     } />
   </>

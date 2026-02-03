@@ -1,14 +1,15 @@
-
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LoadAllItemsButton } from "@/components/bluebay_adm/item-management/LoadAllItemsButton";
 import { Button } from "@/components/ui/button";
-import { FileDown, FileUp } from "lucide-react";
-import { ChangeEvent, useRef } from "react";
+import { FileDown, FileUp, X, Search } from "lucide-react";
+import { ChangeEvent, useRef, useState, KeyboardEvent } from "react";
+import { Badge } from "@/components/ui/badge";
 
 interface ItemFiltersProps {
-  searchTerm: string;
-  onSearchChange: (value: string) => void;
+  searchTerms: string[];
+  onAddSearchTerm: (term: string) => void;
+  onRemoveSearchTerm: (term: string) => void;
   groupFilter: string;
   onGroupFilterChange: (value: string) => void;
   empresaFilter: string;
@@ -22,8 +23,9 @@ interface ItemFiltersProps {
 }
 
 export const ItemFilters = ({
-  searchTerm,
-  onSearchChange,
+  searchTerms,
+  onAddSearchTerm,
+  onRemoveSearchTerm,
   groupFilter,
   onGroupFilterChange,
   empresaFilter,
@@ -36,6 +38,7 @@ export const ItemFilters = ({
   onImportItems
 }: ItemFiltersProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [inputValue, setInputValue] = useState("");
 
   const handleImportButtonClick = () => {
     fileInputRef.current?.click();
@@ -49,26 +52,51 @@ export const ItemFilters = ({
     }
   };
 
-  // Filter out any potential duplicate descriptions that might have slipped through
-  const uniqueGroups = groups.reduce((acc, current) => {
-    const x = acc.find(item => item.gru_descricao === current.gru_descricao);
-    if (!x) {
-      return acc.concat([current]);
-    } else {
-      return acc;
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (inputValue.trim()) {
+        onAddSearchTerm(inputValue.trim());
+        setInputValue("");
+      }
     }
-  }, []);
+  };
 
   return (
     <div className="space-y-4 bg-card p-4 rounded-md border shadow-sm">
       <div className="flex flex-col md:flex-row gap-4">
-        <div className="flex-1">
-          <Input
-            placeholder="Buscar por código ou descrição..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full"
-          />
+        <div className="flex-1 space-y-2">
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Digite e aperte Enter para adicionar filtro..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="pl-8 w-full"
+            />
+          </div>
+
+          {searchTerms.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {searchTerms.map((term, index) => (
+                <Badge key={index} variant="secondary" className="flex items-center gap-1 px-2 py-1">
+                  {term}
+                  <button
+                    onClick={() => onRemoveSearchTerm(term)}
+                    className="ml-1 hover:text-destructive focus:outline-none"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+              {searchTerms.length > 0 && (
+                <span className="text-xs text-muted-foreground self-center ml-1">
+                  (Filtros acumulados: busca itens contendo TODAS as palavras)
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="w-full md:w-64">
@@ -78,12 +106,12 @@ export const ItemFilters = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os grupos</SelectItem>
-              {uniqueGroups.map((group) => (
-                <SelectItem 
-                  key={group.id || group.gru_codigo} 
-                  value={group.gru_codigo || `group-${group.id}`} // Ensure we never pass an empty string
+              {groups.map((group) => (
+                <SelectItem
+                  key={group.id || group.gru_codigo}
+                  value={group.gru_codigo || `group-${group.id}`}
                 >
-                  {group.gru_descricao}
+                  {group.gru_descricao} {group.gru_codigo ? `(${group.gru_codigo})` : ''}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -98,9 +126,9 @@ export const ItemFilters = ({
             <SelectContent>
               <SelectItem value="all">Todas as empresas</SelectItem>
               {empresas.map((empresa) => (
-                <SelectItem 
-                  key={empresa || "sem-empresa"} 
-                  value={empresa || "sem-empresa"} // Ensure we never pass an empty string
+                <SelectItem
+                  key={empresa || "sem-empresa"}
+                  value={empresa || "sem-empresa"}
                 >
                   {empresa || "Sem empresa"}
                 </SelectItem>
@@ -110,24 +138,24 @@ export const ItemFilters = ({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 items-center justify-between">
-        <LoadAllItemsButton 
-          onLoadAll={onLoadAllItems} 
-          isLoading={isLoadingAll} 
+      <div className="flex flex-wrap gap-2 items-center justify-between pt-2 border-t">
+        <LoadAllItemsButton
+          onLoadAll={onLoadAllItems}
+          isLoading={isLoadingAll}
         />
-        
+
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="flex items-center gap-2"
             onClick={onExportItems}
           >
             <FileDown className="h-4 w-4" />
             Exportar Itens
           </Button>
-          
-          <Button 
-            variant="outline" 
+
+          <Button
+            variant="outline"
             className="flex items-center gap-2"
             onClick={handleImportButtonClick}
           >

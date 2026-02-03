@@ -24,16 +24,18 @@ export const ColorSelectionPanel = ({
       <div className="flex justify-between items-center">
         <Label className="text-base font-semibold">Cores</Label>
         <div className="space-x-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
             onClick={onSelectAll}
           >
             Selecionar Todos
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
             onClick={onClearAll}
           >
             Limpar Todos
@@ -42,24 +44,24 @@ export const ColorSelectionPanel = ({
       </div>
       <div className="border rounded-md p-4 grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto">
         {colors.map(color => (
-          <div 
-            key={color.id} 
+          <div
+            key={color.id}
             className="flex items-center space-x-2 hover:bg-muted p-2 rounded"
           >
-            <Checkbox 
+            <Checkbox
               id={`color-${color.id}`}
               checked={selectedColors.includes(color.id)}
               onCheckedChange={() => onToggleColor(color.id)}
             />
             <div className="flex items-center gap-2">
               {color.codigo_hex && (
-                <div 
+                <div
                   className="w-4 h-4 rounded-full border"
                   style={{ backgroundColor: color.codigo_hex }}
                 />
               )}
-              <Label 
-                htmlFor={`color-${color.id}`} 
+              <Label
+                htmlFor={`color-${color.id}`}
                 className="cursor-pointer font-normal flex-1"
               >
                 {color.nome}

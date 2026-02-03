@@ -32,8 +32,9 @@ export const VariationSummary = ({
         </div>
         <div className="flex space-x-2">
           {existingVariationsCount > 0 && (
-            <Button 
-              size="sm" 
+            <Button
+              type="button"
+              size="sm"
               variant="outline"
               onClick={onViewExisting}
             >
@@ -41,9 +42,10 @@ export const VariationSummary = ({
               Editar Variações Existentes
             </Button>
           )}
-          <Button 
-            size="sm" 
-            onClick={onSave} 
+          <Button
+            type="button"
+            size="sm"
+            onClick={onSave}
             disabled={isLoading || !isValid}
           >
             <Save className="h-4 w-4 mr-2" />

@@ -18,28 +18,22 @@ interface ItemGroup {
   estacao_ano?: string; // Added field
 }
 
-export const fetchEmpresas = async (): Promise<string[]> => {
+export const fetchEmpresas = async (): Promise<Empresa[]> => {
   console.info("Buscando todas as empresas...");
 
   try {
     const { data, error } = await supabase
       .from('bluebay_empresa')
-      .select('nome')
+      .select('id, nome')
       .order('nome');
 
     if (error) throw error;
 
-    const empresas = data.map(item => item.nome);
-    console.info(`Total de empresas: ${empresas.length}`);
-
-    return empresas;
+    console.info(`Total de empresas: ${data.length}`);
+    return data;
   } catch (error) {
     console.error("Erro ao buscar empresas:", error);
-
-    // Fallback to hardcoded list in case of error
-    const empresas = ["Bluebay", "BK", "JAB", "nao_definida"];
-    console.info(`Total de empresas (fallback): ${empresas.length}`);
-    return empresas.sort();
+    return [];
   }
 };
 
@@ -50,7 +44,7 @@ export const fetchGroups = async (): Promise<ItemGroup[]> => {
     // Use bluebay_grupo_item table directly instead of view
     const { data, error } = await supabase
       .from('bluebay_grupo_item' as any)
-      .select('id, gru_codigo, gru_descricao, ativo, empresa_id, estacao_ano'); // Added estacao_ano
+      .select('id, gru_codigo, gru_descricao, ativo, empresa_id, estacao_ano, bluebay_empresa(nome)'); // Added join
 
     if (error) {
       console.error("Error fetching groups:", error);
@@ -64,7 +58,7 @@ export const fetchGroups = async (): Promise<ItemGroup[]> => {
       gru_descricao: item.gru_descricao,
       ativo: item.ativo ?? true,
       empresa_id: item.empresa_id || '',
-      empresa_nome: '', // Should be fetched properly if possible, but keeping current pattern
+      empresa_nome: item.bluebay_empresa?.nome || 'Não definida',
       estacao_ano: item.estacao_ano
     }));
 
@@ -79,10 +73,13 @@ export const fetchGroups = async (): Promise<ItemGroup[]> => {
 export const saveGroup = async (groupData: any): Promise<void> => {
   console.info("Salvando grupo:", groupData);
 
+  // Handle new record creation by setting empty ID to undefined
+  const idToSave = groupData.id && groupData.id.trim() !== "" ? groupData.id : undefined;
+
   const { error } = await supabase
     .from('bluebay_grupo_item' as any)
     .upsert({
-      id: groupData.id,
+      id: idToSave,
       gru_codigo: groupData.GRU_CODIGO || groupData.gru_codigo, // Handle both cases
       gru_descricao: groupData.GRU_DESCRICAO || groupData.gru_descricao,
       ativo: groupData.ativo ?? true,

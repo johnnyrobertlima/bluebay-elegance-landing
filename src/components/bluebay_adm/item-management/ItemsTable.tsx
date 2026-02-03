@@ -64,7 +64,7 @@ export const ItemsTable = ({ items, onEdit, onDelete }: ItemsTableProps) => {
               <TableRow key={item.ITEM_CODIGO}>
                 <TableCell className="font-medium">{item.ITEM_CODIGO}</TableCell>
                 <TableCell>{item.CODIGOAUX || "-"}</TableCell>
-                <TableCell>{item.DESCRICAO}</TableCell>
+                <TableCell>{item.DESCRICAO || item.descricao || item.Descricao || "-"}</TableCell>
                 <TableCell>{item.GRU_DESCRICAO || "-"}</TableCell>
                 <TableCell>
                   {item.ativo !== false ? (
@@ -78,7 +78,7 @@ export const ItemsTable = ({ items, onEdit, onDelete }: ItemsTableProps) => {
                   )}
                 </TableCell>
                 <TableCell>
-                  {item.DATACADASTRO 
+                  {item.DATACADASTRO
                     ? format(new Date(item.DATACADASTRO), "dd/MM/yyyy")
                     : "-"}
                 </TableCell>
@@ -87,8 +87,8 @@ export const ItemsTable = ({ items, onEdit, onDelete }: ItemsTableProps) => {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="icon"
                             onClick={() => onEdit(item)}
                           >
@@ -100,14 +100,14 @@ export const ItemsTable = ({ items, onEdit, onDelete }: ItemsTableProps) => {
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                    
+
                     <AlertDialog>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <AlertDialogTrigger asChild>
-                              <Button 
-                                variant="ghost" 
+                              <Button
+                                variant="ghost"
                                 size="icon"
                                 className="text-destructive hover:text-destructive"
                               >
@@ -120,7 +120,7 @@ export const ItemsTable = ({ items, onEdit, onDelete }: ItemsTableProps) => {
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                      
+
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Excluir Item</AlertDialogTitle>

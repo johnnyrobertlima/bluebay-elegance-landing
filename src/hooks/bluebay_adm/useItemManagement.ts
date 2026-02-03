@@ -6,31 +6,31 @@ import { useItemMutations } from "./useItemMutations";
 import { useProductData } from "./useProductData";
 
 export const useItemManagement = () => {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerms, setSearchTerms] = useState<string[]>([]);
   const [groupFilter, setGroupFilter] = useState("all");
   const [empresaFilter, setEmpresaFilter] = useState("all");
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
+
   // Use pagination hook with smaller page size for better performance
   const pagination = usePagination(50);
-  
+
   // Use item data fetching hook
-  const { 
-    items, 
-    groups, 
+  const {
+    items,
+    groups,
     empresas,
-    isLoading, 
+    isLoading,
     isLoadingAll,
     totalCount,
     refreshItems,
     loadAllItems
-  } = useItemsData(searchTerm, groupFilter, empresaFilter, pagination);
-  
+  } = useItemsData(searchTerms, groupFilter, empresaFilter, pagination);
+
   // Use item mutations hook
-  const { 
-    handleSaveItem: saveItemMutation, 
-    handleDeleteItem: deleteItemMutation 
+  const {
+    handleSaveItem: saveItemMutation,
+    handleDeleteItem: deleteItemMutation
   } = useItemMutations(refreshItems);
 
   // Use product data hook
@@ -41,22 +41,29 @@ export const useItemManagement = () => {
     addSubcategory,
     addBrand
   } = useProductData();
-  
-  // Handler for search with debounce
-  const handleSearchChange = useCallback((value: string) => {
-    setSearchTerm(value);
+
+  // Handler for adding a search term
+  const handleAddSearchTerm = useCallback((term: string) => {
+    if (term.trim() && !searchTerms.includes(term.trim())) {
+      setSearchTerms(prev => [...prev, term.trim()]);
+    }
+  }, [searchTerms]);
+
+  // Handler for removing a search term
+  const handleRemoveSearchTerm = useCallback((term: string) => {
+    setSearchTerms(prev => prev.filter(t => t !== term));
   }, []);
-  
+
   // Handler for group filter change
   const handleGroupFilterChange = useCallback((value: string) => {
     setGroupFilter(value);
   }, []);
-  
+
   // Handler for empresa filter change
   const handleEmpresaFilterChange = useCallback((value: string) => {
     setEmpresaFilter(value);
   }, []);
-  
+
   // Handler for saving an item (new or update)
   const handleSaveItem = useCallback(async (itemData: any) => {
     const isUpdate = !!selectedItem;
@@ -64,7 +71,7 @@ export const useItemManagement = () => {
     setSelectedItem(null);
     setIsDialogOpen(false);
   }, [selectedItem, saveItemMutation]);
-  
+
   // Handler for deleting an item
   const handleDeleteItem = useCallback(async (item: any) => {
     await deleteItemMutation(item);
@@ -74,8 +81,9 @@ export const useItemManagement = () => {
     items,
     isLoading: isLoading || isProductDataLoading,
     isLoadingAll,
-    searchTerm,
-    setSearchTerm: handleSearchChange,
+    searchTerms,
+    handleAddSearchTerm,
+    handleRemoveSearchTerm,
     groupFilter,
     setGroupFilter: handleGroupFilterChange,
     empresaFilter,

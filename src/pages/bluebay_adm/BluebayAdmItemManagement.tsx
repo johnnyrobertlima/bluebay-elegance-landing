@@ -25,21 +25,22 @@ const BluebayAdmItemManagement = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab") || "items";
   const productParam = searchParams.get("product");
-  
+
   const [activeTab, setActiveTab] = useState(tabParam);
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  
-  const { 
-    items, 
-    isLoading, 
-    searchTerm, 
-    setSearchTerm, 
-    groupFilter, 
+
+  const {
+    items,
+    isLoading,
+    searchTerms,
+    handleAddSearchTerm,
+    handleRemoveSearchTerm,
+    groupFilter,
     setGroupFilter,
     empresaFilter,
-    setEmpresaFilter, 
+    setEmpresaFilter,
     groups,
     empresas,
     selectedItem,
@@ -89,8 +90,8 @@ const BluebayAdmItemManagement = () => {
   const handleExportItems = useCallback(async () => {
     try {
       setIsExporting(true);
-      const exportedCount = await exportItemsToExcel(searchTerm, groupFilter, empresaFilter);
-      
+      const exportedCount = await exportItemsToExcel(searchTerms, groupFilter, empresaFilter);
+
       if (exportedCount > 0) {
         toast({
           title: "Exportação concluída",
@@ -113,7 +114,7 @@ const BluebayAdmItemManagement = () => {
     } finally {
       setIsExporting(false);
     }
-  }, [searchTerm, groupFilter, empresaFilter, toast]);
+  }, [searchTerms, groupFilter, empresaFilter, toast]);
 
   const handleImportItems = useCallback(async (file: File) => {
     try {
@@ -122,17 +123,16 @@ const BluebayAdmItemManagement = () => {
         title: "Processando importação",
         description: "Aguarde enquanto os itens são atualizados...",
       });
-      
+
       const result = await importItemsFromExcel(file);
-      
+
       if (result.success) {
         toast({
           title: "Importação concluída",
-          description: `${result.updated} de ${result.totalProcessed} itens foram atualizados com sucesso.${
-            result.errors.length > 0 ? ` Houve ${result.errors.length} erros.` : ''
-          }`,
+          description: `${result.updated} de ${result.totalProcessed} itens foram atualizados com sucesso.${result.errors.length > 0 ? ` Houve ${result.errors.length} erros.` : ''
+            }`,
         });
-        
+
         // Refresh the items list to show updated data
         refreshItems();
       } else {
@@ -164,11 +164,11 @@ const BluebayAdmItemManagement = () => {
       <div className="container mx-auto p-6 max-w-7xl">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <div className="flex justify-between items-start">
-            <MemoizedItemManagementHeader 
-              onNewItem={handleNewItem} 
-              isDialogOpen={isDialogOpen} 
+            <MemoizedItemManagementHeader
+              onNewItem={handleNewItem}
+              isDialogOpen={isDialogOpen}
             />
-            
+
             <TabsList>
               <TabsTrigger value="items">Produtos</TabsTrigger>
               <TabsTrigger value="variations">Variações</TabsTrigger>
@@ -177,8 +177,9 @@ const BluebayAdmItemManagement = () => {
 
           <TabsContent value="items" className="space-y-6">
             <MemoizedItemFilters
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
+              searchTerms={searchTerms}
+              onAddSearchTerm={handleAddSearchTerm}
+              onRemoveSearchTerm={handleRemoveSearchTerm}
               groupFilter={groupFilter}
               onGroupFilterChange={setGroupFilter}
               empresaFilter={empresaFilter}
@@ -200,7 +201,7 @@ const BluebayAdmItemManagement = () => {
               totalCount={totalCount}
             />
           </TabsContent>
-          
+
           <TabsContent value="variations" className="space-y-6">
             <MemoizedProductVariationsManager initialSelectedProduct={productParam} />
           </TabsContent>

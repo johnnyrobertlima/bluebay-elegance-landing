@@ -15,16 +15,25 @@ interface CompanyFilterProps {
     onChange: (value: string) => void;
 }
 
+
+interface Empresa {
+    id: string;
+    nome: string;
+}
+
 export const CompanyFilter: React.FC<CompanyFilterProps> = ({
     value,
     onChange,
 }) => {
-    const [empresas, setEmpresas] = useState<string[]>([]);
+    const [empresas, setEmpresas] = useState<Empresa[]>([]);
 
     useEffect(() => {
         const loadEmpresas = async () => {
             const data = await fetchEmpresas();
-            setEmpresas(data);
+            // The service returns objects {id, nome}, but the component was treating them as strings
+            // We cast here or ensure the service returns what we expect. 
+            // Since we know it returns objects now, we use them appropriately.
+            setEmpresas(data as any as Empresa[]);
         };
         loadEmpresas();
     }, []);
@@ -42,8 +51,8 @@ export const CompanyFilter: React.FC<CompanyFilterProps> = ({
                 <SelectContent>
                     <SelectItem value="all">Todas as empresas</SelectItem>
                     {empresas.map((empresa) => (
-                        <SelectItem key={empresa} value={empresa}>
-                            {empresa}
+                        <SelectItem key={empresa.id} value={empresa.nome}>
+                            {empresa.nome}
                         </SelectItem>
                     ))}
                 </SelectContent>

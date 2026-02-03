@@ -28,16 +28,18 @@ export const SizeSelectionPanel = ({
       <div className="flex justify-between items-center">
         <Label className="text-base font-semibold">Tamanhos</Label>
         <div className="space-x-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
             onClick={onSelectAll}
           >
             Selecionar Todos
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
             onClick={onClearAll}
           >
             Limpar Todos
@@ -46,17 +48,17 @@ export const SizeSelectionPanel = ({
       </div>
       <div className="border rounded-md p-4 grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto">
         {sortedSizes.map(size => (
-          <div 
-            key={size.id} 
+          <div
+            key={size.id}
             className="flex items-center space-x-2 hover:bg-muted p-2 rounded"
           >
-            <Checkbox 
+            <Checkbox
               id={`size-${size.id}`}
               checked={selectedSizes.includes(size.id)}
               onCheckedChange={() => onToggleSize(size.id)}
             />
-            <Label 
-              htmlFor={`size-${size.id}`} 
+            <Label
+              htmlFor={`size-${size.id}`}
               className="cursor-pointer font-normal"
             >
               {size.nome}

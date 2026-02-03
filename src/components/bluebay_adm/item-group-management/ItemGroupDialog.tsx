@@ -20,7 +20,7 @@ interface ItemGroup {
 interface ItemGroupDialogProps {
   selectedGroup: ItemGroup | null;
   onSave: (groupData: any) => Promise<void>;
-  empresas: string[];
+  empresas: { id: string; nome: string }[];
   isOpen: boolean;
 }
 
@@ -34,8 +34,8 @@ export const ItemGroupDialog = ({
     id: "",
     GRU_CODIGO: "",
     GRU_DESCRICAO: "",
-    empresa: "nao_definida",
-    estacao_ano: "", // Added field
+    empresa_id: "",
+    estacao_ano: "",
     ativo: true
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,8 +47,8 @@ export const ItemGroupDialog = ({
         id: selectedGroup.id || "",
         GRU_CODIGO: selectedGroup.gru_codigo || "",
         GRU_DESCRICAO: selectedGroup.gru_descricao || "",
-        empresa: selectedGroup.empresa_nome || "nao_definida",
-        estacao_ano: selectedGroup.estacao_ano || "", // Added field
+        empresa_id: selectedGroup.empresa_id || "",
+        estacao_ano: selectedGroup.estacao_ano || "",
         ativo: selectedGroup.ativo !== undefined ? selectedGroup.ativo : true
       });
     } else {
@@ -56,8 +56,8 @@ export const ItemGroupDialog = ({
         id: "",
         GRU_CODIGO: "",
         GRU_DESCRICAO: "",
-        empresa: "nao_definida",
-        estacao_ano: "", // Added field
+        empresa_id: "",
+        estacao_ano: "",
         ativo: true
       });
     }
@@ -100,15 +100,15 @@ export const ItemGroupDialog = ({
           <div className="space-y-2">
             <Label htmlFor="empresa">Empresa</Label>
             <Select
-              value={formData.empresa}
-              onValueChange={(value) => handleChange("empresa", value)}
+              value={formData.empresa_id}
+              onValueChange={(value) => handleChange("empresa_id", value)}
             >
               <SelectTrigger id="empresa">
                 <SelectValue placeholder="Selecione a empresa" />
               </SelectTrigger>
               <SelectContent>
                 {empresas.map((empresa) => (
-                  <SelectItem key={empresa} value={empresa}>{empresa}</SelectItem>
+                  <SelectItem key={empresa.id} value={empresa.id}>{empresa.nome}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

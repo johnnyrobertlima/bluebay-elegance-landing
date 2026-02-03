@@ -22,7 +22,7 @@ interface ItemGroup {
 
 export const useItemGroupManagement = () => {
   const [groups, setGroups] = useState<ItemGroup[]>([]);
-  const [empresas, setEmpresas] = useState<string[]>([]);
+  const [empresas, setEmpresas] = useState<{ id: string, nome: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedGroup, setSelectedGroup] = useState<ItemGroup | null>(null);
   const { toast } = useToast();
