@@ -8,7 +8,7 @@ import { BluebayAdmMenu } from "@/components/bluebay_adm/BluebayAdmMenu";
 export function BluebayAdmEtiquetas() {
   return (
     <main className="container-fluid p-0 max-w-full">
-      <BluebayAdmBanner />
+
       <BluebayAdmMenu />
 
       <div className="container mx-auto p-6 space-y-6">
