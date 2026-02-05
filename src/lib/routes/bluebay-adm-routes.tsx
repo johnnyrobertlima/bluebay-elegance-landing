@@ -26,6 +26,11 @@ import BluebayAdmSeasonPerformance from "@/pages/bluebay_adm/BluebayAdmSeasonPer
 import BluebayAdmWalletManagement from "@/pages/bluebay_adm/BluebayAdmWalletManagement";
 import BluebayAdmDashboardDiretoria from "@/pages/bluebay_adm/BluebayAdmDashboardDiretoria";
 import EANMaintenance from "@/pages/bluebay_adm/EANMaintenance";
+import { ShowroomWithdrawal } from "@/pages/bluebay_adm/ShowroomWithdrawal";
+import { ShowroomControl } from "@/pages/bluebay_adm/ShowroomControl";
+
+
+
 
 export const bluebayAdmRoutes = (
   <>
@@ -148,6 +153,12 @@ export const bluebayAdmRoutes = (
       <PermissionGuard resourcePath="/client-area/bluebay_adm/ean-maintenance">
         <EANMaintenance />
       </PermissionGuard>
+    } />
+    <Route path="/client-area/bluebay_adm/showroom-withdrawal" element={
+      <ShowroomWithdrawal />
+    } />
+    <Route path="/client-area/bluebay_adm/showroom-control" element={
+      <ShowroomControl />
     } />
   </>
 );

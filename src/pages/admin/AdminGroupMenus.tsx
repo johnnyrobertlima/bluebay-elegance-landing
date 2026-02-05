@@ -675,7 +675,7 @@ const AdminGroupMenus = () => {
                   <Label>Item Pai (Agrupador)</Label>
                   <Select value={formData.parent_id || "none"} onValueChange={(v) => setFormData({ ...formData, parent_id: v })}>
                     <SelectTrigger><SelectValue placeholder="Raiz" /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white dark:bg-slate-950">
                       <SelectItem value="none">Nenhum (Item Raiz)</SelectItem>
                       {getParentMenuItems().map(i => (
                         <SelectItem key={i.id} value={i.id}>{i.label}</SelectItem>
@@ -706,7 +706,7 @@ const AdminGroupMenus = () => {
                     <Label>Vincular a Página Existente</Label>
                     <Select value={formData.page_id || "none"} onValueChange={(v) => setFormData({ ...formData, page_id: v })}>
                       <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-white dark:bg-slate-950">
                         <SelectItem value="none">Sem Vínculo (Apenas Pasta)</SelectItem>
                         {systemPages.map(p => (
                           <SelectItem key={p.id} value={p.id}>{p.name} ({p.path})</SelectItem>

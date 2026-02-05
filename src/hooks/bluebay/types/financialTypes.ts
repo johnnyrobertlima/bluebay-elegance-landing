@@ -34,6 +34,7 @@ export interface ClientDebtSummary {
   TOTAL_SALDO: number;
   QUANTIDADE_TITULOS: number;
   DIAS_VENCIDO_MAX: number;
+  totalPago?: number;
 }
 
 export interface CollectionRecord {

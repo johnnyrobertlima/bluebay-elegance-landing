@@ -42,6 +42,7 @@ export const ItemForm = ({
   const [formData, setFormData] = useState({
     ITEM_CODIGO: "",
     DESCRICAO: "",
+    PRECO: "",
     GRU_CODIGO: "",
     GRU_DESCRICAO: "",
     CODIGOAUX: "",
@@ -62,7 +63,6 @@ export const ItemForm = ({
     GRADE: "",
     QTD_CAIXA: "",
     ENDERECO_CD: "",
-    CODIGO_RFID: "",
     CODIGO_RFID: "",
     DUN14: "",
     // Hidden keys for update identification
@@ -108,6 +108,7 @@ export const ItemForm = ({
       setFormData({
         ITEM_CODIGO: item.ITEM_CODIGO || "",
         DESCRICAO: item.DESCRICAO || item.descricao || "",
+        PRECO: item.PRECO || "",
         GRU_CODIGO: item.GRU_CODIGO || "",
         GRU_DESCRICAO: item.GRU_DESCRICAO || "",
         CODIGOAUX: item.CODIGOAUX || "",
@@ -129,7 +130,6 @@ export const ItemForm = ({
         QTD_CAIXA: item.QTD_CAIXA || "",
         ENDERECO_CD: item.ENDERECO_CD || "",
         CODIGO_RFID: item.CODIGO_RFID || "",
-        CODIGO_RFID: item.CODIGO_RFID || "",
         DUN14: item.DUN14 || "",
         MATRIZ: item.MATRIZ !== undefined ? item.MATRIZ : 1,
         FILIAL: item.FILIAL !== undefined ? item.FILIAL : 1
@@ -145,6 +145,7 @@ export const ItemForm = ({
       setFormData({
         ITEM_CODIGO: "",
         DESCRICAO: "",
+        PRECO: "",
         GRU_CODIGO: "",
         GRU_DESCRICAO: "",
         CODIGOAUX: "",
@@ -166,7 +167,9 @@ export const ItemForm = ({
         QTD_CAIXA: "",
         ENDERECO_CD: "",
         CODIGO_RFID: "",
-        DUN14: ""
+        DUN14: "",
+        MATRIZ: 1,
+        FILIAL: 1
       });
       setIsCompanyFromGroup(false);
       setIsStationFromGroup(false);
@@ -250,7 +253,8 @@ export const ItemForm = ({
       // Cast fields that need to be numbers
       const dataToSave = {
         ...formData,
-        QTD_CAIXA: formData.QTD_CAIXA ? Number(formData.QTD_CAIXA) : null
+        QTD_CAIXA: formData.QTD_CAIXA ? Number(formData.QTD_CAIXA) : null,
+        PRECO: formData.PRECO ? Number(formData.PRECO) : null
       };
 
       await onSave(dataToSave);
@@ -309,6 +313,16 @@ export const ItemForm = ({
     } catch (error) {
       console.error("Erro ao adicionar subcategoria:", error);
     }
+  };
+
+  const generateRFID = () => {
+    // Generate 24 random hex characters
+    const hex = Array.from({ length: 24 }, () => Math.floor(Math.random() * 16).toString(16)).join('').toUpperCase();
+    setFormData(prev => ({ ...prev, CODIGO_RFID: hex }));
+    toast({
+      title: "RFID Gerado",
+      description: "Novo código RFID gerado com sucesso."
+    });
   };
 
   return (
@@ -402,15 +416,30 @@ export const ItemForm = ({
                 />
               </div>
 
-              <div className="flex flex-col space-y-1.5">
-                <Label htmlFor="URL_CATALOGO">URL do Catálogo</Label>
-                <Input
-                  id="URL_CATALOGO"
-                  name="URL_CATALOGO"
-                  value={formData.URL_CATALOGO}
-                  onChange={handleChange}
-                  placeholder="https://..."
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col space-y-1.5">
+                  <Label htmlFor="PRECO">Preço (R$)</Label>
+                  <Input
+                    id="PRECO"
+                    name="PRECO"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.PRECO}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="flex flex-col space-y-1.5">
+                  <Label htmlFor="URL_CATALOGO">URL do Catálogo</Label>
+                  <Input
+                    id="URL_CATALOGO"
+                    name="URL_CATALOGO"
+                    value={formData.URL_CATALOGO}
+                    onChange={handleChange}
+                    placeholder="https://..."
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -734,14 +763,21 @@ export const ItemForm = ({
           </div>
 
           <div className="flex flex-col space-y-1.5">
-            <Label htmlFor="CODIGO_RFID">Código RFID</Label>
-            <Input
-              id="CODIGO_RFID"
-              name="CODIGO_RFID"
-              value={formData.CODIGO_RFID}
-              onChange={handleChange}
-              placeholder="Código RFID"
-            />
+            <Label htmlFor="CODIGO_RFID">Código RFID (24 caracteres Hex)</Label>
+            <div className="flex gap-2">
+              <Input
+                id="CODIGO_RFID"
+                name="CODIGO_RFID"
+                value={formData.CODIGO_RFID}
+                onChange={handleChange}
+                placeholder="Código RFID"
+                className="font-mono"
+                maxLength={24}
+              />
+              <Button type="button" variant="outline" onClick={generateRFID} title="Gerar código aleatório único">
+                Gerar RFID
+              </Button>
+            </div>
           </div>
 
           <div className="flex items-center space-x-2 mt-4">

@@ -90,7 +90,11 @@ export function LabelPrintQueue() {
         const itemsToPrint: any[] = [];
         queue.forEach(qItem => {
             for (let i = 0; i < qItem.quantity; i++) {
-                itemsToPrint.push(qItem.item);
+                // Clone item and override URL_CATALOGO with dynamic public redirect
+                itemsToPrint.push({
+                    ...qItem.item,
+                    URL_CATALOGO: `https://bluebay.com.br/catalogo/${qItem.item.ITEM_CODIGO}`
+                });
             }
         });
 

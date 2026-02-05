@@ -13,16 +13,28 @@ export const useFinanciero = () => {
   const [titles, setTitles] = useState<FinancialTitle[]>([]);
   const [filteredTitles, setFilteredTitles] = useState<FinancialTitle[]>([]);
   const [filteredInvoices, setFilteredInvoices] = useState<any[]>([]);
+  const [financialSummary, setFinancialSummary] = useState({
+    totalVencido: 0,
+    totalAVencer: 0,
+    totalPago: 0
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMorePages, setHasMorePages] = useState(false);
-  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
+  const [dateRange, setDateRange] = useState<DateRange>(() => {
+    const today = new Date();
+    const from = new Date(today);
+    from.setDate(today.getDate() - 30);
+    const to = new Date(today);
+    to.setDate(today.getDate() + 7);
+    return { from, to };
+  });
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [clientFilter, setClientFilter] = useState<string>("");
   const [notaFilter, setNotaFilter] = useState<string>("");
   const [clientFinancialSummaries, setClientFinancialSummaries] = useState<ClientDebtSummary[]>([]);
 
-  const pagination = usePagination(50);
+  const pagination = usePagination(2000);
 
   const availableStatuses = ["todos", "vencidos", "a_vencer", "pagos"];
 
@@ -50,7 +62,7 @@ export const useFinanciero = () => {
 
       let query = supabase
         .from("BLUEBAY_TITULO")
-        .select("*", { count: "exact" })
+        .select("PES_CODIGO, NUMNOTA, NUMDOCUMENTO, DTVENCIMENTO, DTEMISSAO, DTPAGTO, VLRTITULO, VLRSALDO, STATUS, ANOBASE, TIPO", { count: "exact" })
         .eq("TIPO", "R") // Receipts only
         .order("DTVENCIMENTO", { ascending: true });
 
@@ -130,34 +142,49 @@ export const useFinanciero = () => {
         setHasMorePages(count > pagination.currentPage * pagination.pageSize);
       }
 
-      // Process client summaries (simple aggregation for now)
-      const clientsMap = new Map<string, ClientDebtSummary>();
-      results.forEach(title => {
-        if (!title.PES_CODIGO) return;
-        const existing = clientsMap.get(title.PES_CODIGO);
-        const isVencido = !title.DTPAGTO && title.DTVENCIMENTO && new Date(title.DTVENCIMENTO) < new Date();
+      // Fetch client summaries using RPC
+      const { data: clientsData, error: clientsError } = await supabase
+        .rpc('get_client_financial_summaries', {
+          p_status_filter: statusFilter,
+          p_client_filter: clientFilter || null,
+          p_date_from: dateRange.from ? format(dateRange.from, "yyyy-MM-dd") : null,
+          p_date_to: dateRange.to ? format(dateRange.to, "yyyy-MM-dd") : null,
+          p_nota_filter: notaFilter || null
+        });
 
-        if (existing) {
-          existing.TOTAL_SALDO += title.VLRSALDO || 0;
-          existing.QUANTIDADE_TITULOS += 1;
-          if (isVencido) {
-            existing.totalVencido = (existing.totalVencido || 0) + (title.VLRSALDO || 0);
-          } else if (!title.DTPAGTO) {
-            existing.totalAVencer = (existing.totalAVencer || 0) + (title.VLRSALDO || 0);
-          }
-        } else {
-          clientsMap.set(title.PES_CODIGO, {
-            PES_CODIGO: title.PES_CODIGO,
-            CLIENTE_NOME: title.CLIENTE_NOME || "Desconhecido",
-            TOTAL_SALDO: title.VLRSALDO || 0,
-            QUANTIDADE_TITULOS: 1,
-            DIAS_VENCIDO_MAX: 0,
-            totalVencido: isVencido ? (title.VLRSALDO || 0) : 0,
-            totalAVencer: !isVencido && !title.DTPAGTO ? (title.VLRSALDO || 0) : 0,
-          });
-        }
-      });
-      setClientFinancialSummaries(Array.from(clientsMap.values()));
+      if (clientsData) {
+        setClientFinancialSummaries((clientsData as any[]).map(c => ({
+          PES_CODIGO: c.PES_CODIGO,
+          CLIENTE_NOME: c.CLIENTE_NOME,
+          totalVencido: Number(c.totalVencido),
+          totalAVencer: Number(c.totalAVencer),
+          totalPago: Number(c.totalPago),
+          TOTAL_SALDO: Number(c.totalVencido) + Number(c.totalAVencer),
+          QUANTIDADE_TITULOS: 0,
+          DIAS_VENCIDO_MAX: 0
+        })));
+      } else {
+        setClientFinancialSummaries([]);
+      }
+
+      // Calculate totals using RPC for accuracy across all pages
+      const { data: totalsData, error: totalsError } = await supabase
+        .rpc('get_financial_totals', {
+          p_status_filter: statusFilter,
+          p_client_filter: clientFilter || null,
+          p_date_from: dateRange.from ? format(dateRange.from, "yyyy-MM-dd") : null,
+          p_date_to: dateRange.to ? format(dateRange.to, "yyyy-MM-dd") : null,
+          p_nota_filter: notaFilter || null
+        });
+
+      if (totalsData) {
+        const data = totalsData as any; // Cast to any or define an interface for the RPC result
+        setFinancialSummary({
+          totalVencido: Number(data.totalVencido || 0),
+          totalAVencer: Number(data.totalAVencer || 0),
+          totalPago: Number(data.totalPago || 0)
+        });
+      }
 
     } catch (error) {
       console.error("Error loading financial data:", error);
@@ -193,11 +220,7 @@ export const useFinanciero = () => {
     isLoading,
     isLoadingMore,
     hasMorePages,
-    financialSummary: {
-      totalVencido: filteredTitles.reduce((acc, t) => acc + (t.STATUS === "VENCIDO" ? (t.VLRSALDO || 0) : 0), 0),
-      totalAVencer: filteredTitles.reduce((acc, t) => acc + (t.STATUS !== "VENCIDO" && !t.DTPAGTO ? (t.VLRSALDO || 0) : 0), 0),
-      totalPago: filteredTitles.reduce((acc, t) => acc + (t.DTPAGTO ? (t.VLRTITULO || 0) : 0), 0)
-    },
+    financialSummary,
     clientFinancialSummaries,
     dateRange,
     updateDateRange,

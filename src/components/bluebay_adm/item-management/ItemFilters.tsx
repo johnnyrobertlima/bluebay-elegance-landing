@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { FileDown, FileUp, X, Search } from "lucide-react";
 import { ChangeEvent, useRef, useState, KeyboardEvent } from "react";
 import { Badge } from "@/components/ui/badge";
+import { DataUpgradeDialog } from "./DataUpgradeDialog";
 
 interface ItemFiltersProps {
   searchTerms: string[];
@@ -154,13 +155,15 @@ export const ItemFilters = ({
             Exportar Itens
           </Button>
 
+          <DataUpgradeDialog onSuccess={onLoadAllItems} />
+
           <Button
             variant="outline"
             className="flex items-center gap-2"
             onClick={handleImportButtonClick}
           >
             <FileUp className="h-4 w-4" />
-            Atualizar Itens
+            Importar Itens (Legado)
             <input
               type="file"
               ref={fileInputRef}

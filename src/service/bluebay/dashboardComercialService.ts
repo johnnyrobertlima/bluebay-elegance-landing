@@ -2008,3 +2008,9 @@ export const fetchCityStatsV2 = async (
     totalPedidosCount: c.totalPedidosCount
   })).sort((a, b) => b.totalFaturado - a.totalFaturado);
 };
+
+/**
+ * Busca todos os representantes ativos
+ */
+
+

@@ -143,6 +143,36 @@ export const generateZPL = async (layout: LabelLayout, dataList: any[], options:
         zpl += '^MNY^MMT'; // Tear-off
         zpl += '^LH0,0';
 
+        // Custom ZT411 Calibration for RFID if needed?
+        // ^RS8 = Tag Type Gen 2. ^RS,p2,,,e (e=error handling)
+        // Usually defaults are fine for Gen2.
+
+        if (layout.rfid_enabled && layout.rfid_column) {
+            // Fetch RFID content
+            const rfidContent = replacePlaceholders(layout.rfid_column, data);
+            if (rfidContent) {
+                // ^RS8 = Type Gen2
+                zpl += '^RS8';
+
+                // Heuristic: If content looks like a numeric/hex code (common for simple IDs), 
+                // write as Hex (^RFW,H) so scanners showing raw hex see "1234" instead of "31323334".
+                // Otherwise fallback to ASCII (^RFW,A).
+
+                const isHexCandidate = /^[0-9A-Fa-f]+$/.test(rfidContent);
+
+                if (isHexCandidate) {
+                    // Ensure even length for Hex
+                    let hexData = rfidContent;
+                    if (hexData.length % 2 !== 0) {
+                        hexData = '0' + hexData;
+                    }
+                    zpl += `^RFW,H^FD${hexData}^FS`;
+                } else {
+                    zpl += `^RFW,A^FD${cleanText(rfidContent)}^FS`;
+                }
+            }
+        }
+
         // Use Loop for async await support
         for (const element of layout.layout_data) {
             // Apply Manual Offsets to Coordinates

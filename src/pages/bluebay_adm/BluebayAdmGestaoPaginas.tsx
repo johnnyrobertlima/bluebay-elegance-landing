@@ -298,7 +298,7 @@ const BluebayAdmGestaoPaginas = () => {
                                 <SelectTrigger>
                                     <SelectValue placeholder="Selecione o pai..." />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="bg-white dark:bg-slate-950">
                                     <SelectItem value="none">Nenhum (Item Raiz)</SelectItem>
                                     {pages
                                         .filter((p) => !p.parent_id && p.id !== selectedPage?.id)

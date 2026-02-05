@@ -40,7 +40,8 @@ const ITEM_FIELDS = [
     { value: 'GRADE', label: 'Grade' },
     { value: 'QTD_CAIXA', label: 'Qtd. por Caixa' },
     { value: 'DUN14', label: 'DUN14' },
-    { value: 'URL_CATALOGO', label: 'URL Catálogo (QR)' }
+    { value: 'URL_CATALOGO', label: 'URL Catálogo (QR)' },
+    { value: 'CODIGO_RFID', label: 'Código RFID' }
 ];
 const DEFAULT_WIDTH = 86;
 const DEFAULT_HEIGHT = 120;
@@ -518,6 +519,33 @@ export function LabelLayoutBuilder({ onSave }: LabelLayoutBuilderProps) {
                             />
                         </div>
                     </div>
+
+                    <div className="flex items-center gap-2">
+                        <input type="checkbox" checked={currentLayout.rfid_enabled || false} onChange={e => setCurrentLayout({ ...currentLayout, rfid_enabled: e.target.checked })} id="rfidEnabled" />
+                        <Label htmlFor="rfidEnabled">Habilitar RFID (ZT411)</Label>
+                    </div>
+
+                    {currentLayout.rfid_enabled && (
+                        <div className="space-y-2 border p-2 rounded bg-orange-50">
+                            <Label className="text-xs font-semibold text-orange-800">Campo para Gravação RFID</Label>
+                            <Select
+                                value={currentLayout.rfid_column?.replace(/[{}]/g, '') || ''}
+                                onValueChange={(val) => setCurrentLayout({ ...currentLayout, rfid_column: `{${val}}` })}
+                            >
+                                <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="Selecione o campo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {ITEM_FIELDS.map(f => (
+                                        <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-[10px] text-muted-foreground">
+                                O valor deste campo será gravado na etiqueta RFID usando comando ^RF.
+                            </p>
+                        </div>
+                    )}
 
                     <div className="flex items-center gap-2">
                         <input type="checkbox" checked={currentLayout.is_active} onChange={e => setCurrentLayout({ ...currentLayout, is_active: e.target.checked })} id="isActive" />

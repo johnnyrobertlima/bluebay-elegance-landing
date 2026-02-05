@@ -33,11 +33,21 @@ export const DateRangePicker: React.FC<FinancialDateRangePickerProps> = ({
   label,
   className,
 }) => {
-  const dateRange: DateRange | undefined = value || (startDate && endDate ? { from: startDate, to: endDate } : undefined);
-  
+  const dateRange: DateRange | undefined = value || (startDate ? { from: startDate, to: endDate || startDate } : undefined);
+
   const handleChange = (range: DateRange | undefined) => {
+    // Ensure we propagate the change correctly even if partial
     if (onChange) onChange(range);
     if (onUpdate) onUpdate(range);
+  };
+
+  const setPresetRange = (years: number) => {
+    const to = new Date();
+    const from = new Date();
+    from.setFullYear(from.getFullYear() - years);
+
+    const range = { from, to };
+    handleChange(range);
   };
 
   return (
@@ -69,15 +79,44 @@ export const DateRangePicker: React.FC<FinancialDateRangePickerProps> = ({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            initialFocus
-            mode="range"
-            defaultMonth={dateRange?.from}
-            selected={dateRange}
-            onSelect={handleChange}
-            numberOfMonths={2}
-            locale={ptBR}
-          />
+          <div className="flex flex-col sm:flex-row">
+            <div className="p-3 border-r border-border space-y-2 flex flex-col justify-center">
+              <span className="text-sm font-medium mb-1 px-1">Períodos Rápidos</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start font-normal"
+                onClick={() => setPresetRange(1)}
+              >
+                Último 1 Ano
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start font-normal"
+                onClick={() => setPresetRange(2)}
+              >
+                Últimos 2 Anos
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start font-normal"
+                onClick={() => setPresetRange(3)}
+              >
+                Últimos 3 Anos
+              </Button>
+            </div>
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={dateRange?.from}
+              selected={dateRange}
+              onSelect={handleChange}
+              numberOfMonths={2}
+              locale={ptBR}
+            />
+          </div>
         </PopoverContent>
       </Popover>
     </div>

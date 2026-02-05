@@ -131,7 +131,7 @@ export const fetchItems = async (
   try {
     let query = supabase
       .from("BLUEBAY_ITEM")
-      .select("ITEM_CODIGO, DESCRICAO, GRU_CODIGO, GRU_DESCRICAO, CODIGOAUX, id_subcategoria, id_marca, empresa, estacao, genero, faixa_etaria, ativo, ncm, FOTO_PRODUTO, URL_CATALOGO, LOOKBOOK, SHOWROOM, CORES, GRADE, QTD_CAIXA, ENDERECO_CD, CODIGO_RFID, DUN14, MATRIZ, FILIAL", { count: "exact" });
+      .select("ITEM_CODIGO, DESCRICAO, PRECO, GRU_CODIGO, GRU_DESCRICAO, CODIGOAUX, id_subcategoria, id_marca, empresa, estacao, genero, faixa_etaria, ativo, ncm, FOTO_PRODUTO, URL_CATALOGO, LOOKBOOK, SHOWROOM, CORES, GRADE, QTD_CAIXA, ENDERECO_CD, CODIGO_RFID, DUN14, MATRIZ, FILIAL", { count: "exact" });
 
     // Apply cumulative search terms
     if (searchTerms && searchTerms.length > 0) {
@@ -255,4 +255,66 @@ export const uploadProductImage = async (file: File): Promise<string | null> => 
  */
 
 
+
+
+
+/**
+ * Bulk update items based on ITEM_CODIGO
+ * Optimized for large datasets by processing in chunks
+ */
+export const bulkUpdateItems = async (items: any[], onProgress?: (progress: number) => void): Promise<{ success: number; errors: string[] }> => {
+  let successCount = 0;
+  const errors: string[] = [];
+  const BATCH_SIZE = 50; // Process 50 items at a time to avoid blocking UI
+
+  console.log(`Starting bulk update for ${items.length} items...`);
+
+  for (let i = 0; i < items.length; i += BATCH_SIZE) {
+    const chunk = items.slice(i, i + BATCH_SIZE);
+
+    // Process chunk in parallel
+    const promises = chunk.map(async (item) => {
+      try {
+        if (!item.ITEM_CODIGO) {
+          return { success: false, error: `Item ignored: Missing ITEM_CODIGO` };
+        }
+
+        const updateData = { ...item };
+        delete updateData.ITEM_CODIGO;
+
+        const { error } = await supabase
+          .from("BLUEBAY_ITEM")
+          .update(updateData)
+          .eq("ITEM_CODIGO", item.ITEM_CODIGO);
+
+        if (error) {
+          return { success: false, error: `Error updating ${item.ITEM_CODIGO}: ${error.message}` };
+        } else {
+          return { success: true };
+        }
+      } catch (err: any) {
+        return { success: false, error: `Exception for ${item.ITEM_CODIGO}: ${err.message}` };
+      }
+    });
+
+    const results = await Promise.all(promises);
+
+    results.forEach(res => {
+      if (res.success) successCount++;
+      else if (res.error) errors.push(res.error);
+    });
+
+    // Optional: Add a small delay to let the event loop breathe
+    if (i % 500 === 0) {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+
+    if (onProgress) {
+      onProgress(Math.min(100, Math.round(((i + chunk.length) / items.length) * 100)));
+    }
+  }
+
+  console.log(`Bulk update finished. Success: ${successCount}, Errors: ${errors.length}`);
+  return { success: successCount, errors };
+};
 

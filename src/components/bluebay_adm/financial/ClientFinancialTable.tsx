@@ -5,16 +5,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import { formatCurrency } from "@/utils/formatters";
-import { ClientFinancialSummary } from "@/hooks/bluebay/useFinancialFilters";
+import { ClientDebtSummary } from "@/hooks/bluebay/types/financialTypes";
 
 interface ClientFinancialTableProps {
-  clients: ClientFinancialSummary[];
+  clients: ClientDebtSummary[];
   isLoading: boolean;
   onClientSelect: (clientCode: string) => void;
 }
 
-export const ClientFinancialTable: React.FC<ClientFinancialTableProps> = ({ 
-  clients, 
+export const ClientFinancialTable: React.FC<ClientFinancialTableProps> = ({
+  clients,
   isLoading,
   onClientSelect
 }) => {
@@ -52,28 +52,35 @@ export const ClientFinancialTable: React.FC<ClientFinancialTableProps> = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {clients.map((client) => (
-            <TableRow key={client.PES_CODIGO}>
-              <TableCell>{client.PES_CODIGO}</TableCell>
-              <TableCell className="max-w-[200px] truncate" title={client.CLIENTE_NOME}>
-                {client.CLIENTE_NOME}
-              </TableCell>
-              <TableCell>{formatCurrency(client.totalValoresVencidos)}</TableCell>
-              <TableCell>{formatCurrency(client.totalEmAberto)}</TableCell>
-              <TableCell>{formatCurrency(client.totalPago)}</TableCell>
-              <TableCell>{formatCurrency(client.totalEmAberto + client.totalPago)}</TableCell>
-              <TableCell className="text-right">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => onClientSelect(String(client.PES_CODIGO))}
-                >
-                  <Search className="h-4 w-4 mr-1" />
-                  Ver Títulos
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
+          {clients.map((client) => {
+            const totalVencido = client.totalVencido || 0;
+            const totalAVencer = client.totalAVencer || 0;
+            const totalPago = client.totalPago || 0;
+            const totalGeral = totalVencido + totalAVencer + totalPago;
+
+            return (
+              <TableRow key={client.PES_CODIGO}>
+                <TableCell>{client.PES_CODIGO}</TableCell>
+                <TableCell className="max-w-[200px] truncate" title={client.CLIENTE_NOME}>
+                  {client.CLIENTE_NOME}
+                </TableCell>
+                <TableCell>{formatCurrency(totalVencido)}</TableCell>
+                <TableCell>{formatCurrency(totalAVencer)}</TableCell>
+                <TableCell>{formatCurrency(totalPago)}</TableCell>
+                <TableCell className="font-bold">{formatCurrency(totalGeral)}</TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onClientSelect(String(client.PES_CODIGO))}
+                  >
+                    <Search className="h-4 w-4 mr-1" />
+                    Ver Títulos
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

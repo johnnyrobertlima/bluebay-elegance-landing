@@ -450,7 +450,7 @@ const AdminUserManagement = () => {
                                     <SelectTrigger className="w-[180px]">
                                         <SelectValue placeholder="Selecionar grupo" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="bg-white dark:bg-slate-950">
                                         {allGroups
                                             .filter(g => !user.groups.find(ug => ug.id === g.id))
                                             .map((g) => (

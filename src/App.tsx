@@ -21,6 +21,7 @@ import AdminUserManagement from "./pages/admin/AdminUserManagement";
 import AdminSystemPages from "./pages/admin/AdminSystemPages";
 import AdminIndexContent from "./pages/admin/AdminIndexContent";
 import { bluebayAdmRoutes } from "@/lib/routes/bluebay-adm-routes";
+import CatalogRedirect from "./pages/public/CatalogRedirect";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/catalogo/:item_codigo" element={<CatalogRedirect />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/login" element={<Auth />} />
               <Route path="/produtos" element={<Products />} />

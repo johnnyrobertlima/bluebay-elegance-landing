@@ -5,6 +5,8 @@ import { WalletManagementGrid } from "@/components/bluebay_adm/wallet-management
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
+import { MultiSelectAsyncFilter } from "@/components/bluebay_adm/dashboard-comercial/MultiSelectAsyncFilter";
+import { fetchActiveRepresentativesRPC } from "@/services/bluebay/dashboardComercialService";
 
 const BluebayAdmWalletManagement = () => {
     const {
@@ -13,7 +15,11 @@ const BluebayAdmWalletManagement = () => {
         startDate,
         endDate,
         setDateRange,
-        refreshData
+        refreshData,
+        selectedRepresentatives,
+        setSelectedRepresentatives,
+        onlyPending,
+        setOnlyPending
     } = useWalletManagement();
 
     return (
@@ -27,6 +33,31 @@ const BluebayAdmWalletManagement = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 bg-card p-2 rounded-md border text-sm">
+                            <label className="cursor-pointer select-none font-medium flex items-center gap-2">
+                                <span className={onlyPending ? "text-primary" : "text-muted-foreground"}>Somente Pendências</span>
+                                <div
+                                    className={`w-9 h-5 rounded-full p-1 transition-colors ${onlyPending ? 'bg-primary' : 'bg-muted'}`}
+                                    onClick={() => setOnlyPending(!onlyPending)}
+                                >
+                                    <div className={`w-3 h-3 bg-white rounded-full shadow-sm transition-transform ${onlyPending ? 'translate-x-4' : 'translate-x-0'}`} />
+                                </div>
+                            </label>
+                        </div>
+                        <div className="w-[300px]">
+                            <MultiSelectAsyncFilter
+                                label="Representante"
+                                value={selectedRepresentatives}
+                                onChange={setSelectedRepresentatives}
+                                fetchOptions={async (q) => {
+                                    const all = await fetchActiveRepresentativesRPC();
+                                    if (!q) return all;
+                                    return all.filter(r => r.label.toLowerCase().includes(q.toLowerCase()));
+                                }}
+                                placeholder="Buscar Representante..."
+                                width="w-[300px]"
+                            />
+                        </div>
                         <DateRangePicker
                             value={{ from: startDate, to: endDate }}
                             onChange={(range) => {

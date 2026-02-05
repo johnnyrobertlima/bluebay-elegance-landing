@@ -3,10 +3,13 @@ import { useState, useCallback, useEffect } from 'react';
 import { subDays } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { fetchWalletOrders, WalletOrder } from '@/services/bluebay/walletManagementService';
+import { getActivePessoaIds } from '@/services/bluebay/dashboardComercialService';
 
 export const useWalletManagement = () => {
-    const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 30));
+    const [startDate, setStartDate] = useState<Date>(subDays(new Date(), 365));
     const [endDate, setEndDate] = useState<Date>(new Date());
+    const [selectedRepresentatives, setSelectedRepresentatives] = useState<string[]>([]);
+    const [onlyPending, setOnlyPending] = useState(true);
 
     const [data, setData] = useState<WalletOrder[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -24,9 +27,20 @@ export const useWalletManagement = () => {
 
     useEffect(() => {
         const loadData = async () => {
+            // Only load if representatives are selected
+            if (selectedRepresentatives.length === 0) {
+                setData([]);
+                return;
+            }
+
             setIsLoading(true);
             try {
-                const orders = await fetchWalletOrders(startDate, endDate);
+                const orders = await fetchWalletOrders(
+                    startDate,
+                    endDate,
+                    selectedRepresentatives,
+                    onlyPending
+                );
                 setData(orders);
             } catch (error) {
                 console.error("Error loading wallet data:", error);
@@ -41,7 +55,7 @@ export const useWalletManagement = () => {
         };
 
         loadData();
-    }, [startDate, endDate, requestId]);
+    }, [startDate, endDate, selectedRepresentatives, onlyPending, requestId]);
 
     return {
         data,
@@ -49,6 +63,10 @@ export const useWalletManagement = () => {
         startDate,
         endDate,
         setDateRange,
-        refreshData
+        refreshData,
+        selectedRepresentatives,
+        setSelectedRepresentatives,
+        onlyPending,
+        setOnlyPending
     };
 };
