@@ -93,7 +93,7 @@ export function LabelPrintQueue() {
                 // Clone item and override URL_CATALOGO with dynamic public redirect
                 itemsToPrint.push({
                     ...qItem.item,
-                    URL_CATALOGO: `https://bluebay.com.br/catalogo/${qItem.item.ITEM_CODIGO}`
+                    URL_CATALOGO: `https://bluebay.com.br/catalogo/${encodeURIComponent(qItem.item.ITEM_CODIGO)}`
                 });
             }
         });
