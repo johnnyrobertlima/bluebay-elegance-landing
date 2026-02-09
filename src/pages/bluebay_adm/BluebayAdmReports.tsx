@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 
 const BluebayAdmReports = () => {
-  const { 
-    isLoading, 
-    items, 
-    dateRange, 
+  const {
+    isLoading,
+    items,
+    dateRange,
     updateDateRange,
     loadItemDetails,
     selectedItemDetails,
@@ -27,15 +27,15 @@ const BluebayAdmReports = () => {
 
   return (
     <main className="container-fluid p-0 max-w-full">
-      <BluebayAdmBanner />
+
       <BluebayAdmMenu />
-      
+
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <h1 className="text-3xl font-bold tracking-tight mb-4 md:mb-0">Relatórios de Itens</h1>
             <div className="flex gap-3 items-center">
-              <DatePickerWithRange 
+              <DatePickerWithRange
                 dateRange={{
                   from: dateRange.startDate,
                   to: dateRange.endDate
@@ -47,8 +47,8 @@ const BluebayAdmReports = () => {
                   });
                 }}
               />
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="icon"
                 onClick={refreshData}
                 title="Atualizar dados"
@@ -58,7 +58,7 @@ const BluebayAdmReports = () => {
               </Button>
             </div>
           </div>
-          
+
           <div className="bg-white p-6 rounded-lg shadow">
             {isLoading ? (
               <div className="py-8 text-center">
@@ -73,8 +73,8 @@ const BluebayAdmReports = () => {
                 <p className="text-md text-gray-600 max-w-xl mx-auto mb-4">
                   Tente selecionar um período maior ou verificar se existem registros de faturamento no sistema.
                 </p>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={refreshData}
                   className="mt-2"
                 >
@@ -83,7 +83,7 @@ const BluebayAdmReports = () => {
                 </Button>
               </div>
             ) : (
-              <ReportsTable 
+              <ReportsTable
                 items={items}
                 isLoading={isLoading}
                 onItemClick={handleItemClick}

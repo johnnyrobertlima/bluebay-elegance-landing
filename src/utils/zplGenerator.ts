@@ -11,15 +11,26 @@ const cleanText = (text: string): string => {
 
 const replacePlaceholders = (text: string, data: any): string => {
     return text.replace(/\{(\w+)\}/g, (_, key) => {
+        let value = '';
+
         // defined check
-        if (data[key] !== undefined) return String(data[key]);
+        if (data[key] !== undefined) {
+            value = String(data[key]);
+        } else {
+            // case-insensitive check
+            const lowerKey = key.toLowerCase();
+            const foundKey = Object.keys(data).find(k => k.toLowerCase() === lowerKey);
+            if (foundKey && data[foundKey] !== undefined) {
+                value = String(data[foundKey]);
+            }
+        }
 
-        // case-insensitive check
-        const lowerKey = key.toLowerCase();
-        const foundKey = Object.keys(data).find(k => k.toLowerCase() === lowerKey);
-        if (foundKey && data[foundKey] !== undefined) return String(data[foundKey]);
+        // Special formatting for 'cores': break line at period
+        if (key.toLowerCase() === 'cores') {
+            return value.replace(/\./g, '.\\&');
+        }
 
-        return '';
+        return value;
     });
 };
 

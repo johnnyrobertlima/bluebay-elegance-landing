@@ -16,7 +16,7 @@ import {
 import { PlusCircle, Link, Upload, ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ItemVariationsGrid } from "./ItemVariationsGrid";
-import { uploadProductImage } from "@/service/bluebay_adm/itemManagementService";
+import { uploadProductImage, fetchNextCodigoAux } from "@/service/bluebay_adm/itemManagementService";
 
 interface ItemFormProps {
   item: any | null;
@@ -325,6 +325,32 @@ export const ItemForm = ({
     });
   };
 
+  const generateCodigoAux = async () => {
+    // Only allow if empty, '0', or equal to item code (though button visibility handles most)
+    if (formData.CODIGOAUX && formData.CODIGOAUX !== '0' && formData.CODIGOAUX !== formData.ITEM_CODIGO) {
+      if (!confirm("O código auxiliar já existe. Deseja substituí-lo?")) return;
+    }
+
+    try {
+      const nextCode = await fetchNextCodigoAux();
+      if (nextCode) {
+        setFormData(prev => ({ ...prev, CODIGOAUX: nextCode }));
+        toast({
+          title: "Código Gerado",
+          description: `Novo código auxiliar gerado: ${nextCode}`
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Não foi possível gerar um novo código."
+        });
+      }
+    } catch (error) {
+      console.error("Error generating code:", error);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit}>
       <Tabs
@@ -394,13 +420,24 @@ export const ItemForm = ({
                 </div>
                 <div className="flex flex-col space-y-1.5">
                   <Label htmlFor="CODIGOAUX">Código Auxiliar</Label>
-                  <Input
-                    id="CODIGOAUX"
-                    name="CODIGOAUX"
-                    value={formData.CODIGOAUX}
-                    onChange={handleChange}
-                    placeholder="Código auxiliar (opcional)"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="CODIGOAUX"
+                      name="CODIGOAUX"
+                      value={formData.CODIGOAUX}
+                      onChange={handleChange}
+                      placeholder="Código auxiliar (opcional)"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={generateCodigoAux}
+                      title="Gerar código auxiliar sequencial"
+                      disabled={isLoading || (!!formData.CODIGOAUX && formData.CODIGOAUX !== '0' && formData.CODIGOAUX !== formData.ITEM_CODIGO)}
+                    >
+                      Gerar
+                    </Button>
+                  </div>
                 </div>
               </div>
 

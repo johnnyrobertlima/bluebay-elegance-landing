@@ -117,12 +117,9 @@ const GestaoRelatorios = () => {
     }, []);
 
     return (
-        <div className="min-h-screen bg-background">
-            <BluebayAdmBanner />
+        <div className="container-fluid p-0">
+            <BluebayAdmMenu />
             <div className="container mx-auto px-4 py-8">
-                <div className="mb-8">
-                    <BluebayAdmMenu />
-                </div>
 
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-3xl font-bold">Gestão de Relatórios</h1>

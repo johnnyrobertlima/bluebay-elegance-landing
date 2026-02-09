@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { BluebayAdmMenu } from "@/components/bluebay_adm/BluebayAdmMenu";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -405,6 +406,7 @@ const AdminUserGroups = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <BluebayAdmMenu />
       <div className="container mx-auto py-8 px-4">
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}>

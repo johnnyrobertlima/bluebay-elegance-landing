@@ -54,7 +54,7 @@ const BluebayAdmEstoque = () => {
 
   return (
     <main className="container-fluid p-0 max-w-full">
-      <BluebayAdmBanner />
+
       <BluebayAdmMenu />
 
       <div className="container mx-auto px-4 py-6">

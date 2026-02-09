@@ -11,14 +11,14 @@ import { useAnaliseDeCompraData } from "@/hooks/bluebay/useAnaliseDeCompraData";
 import { useAnaliseDeCompraExport } from "@/hooks/bluebay/useAnaliseDeCompraExport";
 
 const BluebayAdmAnaliseDeCompra = () => {
-  const { 
-    filteredItems, 
-    groupedItems, 
-    isLoading, 
-    searchTerm, 
-    setSearchTerm 
+  const {
+    filteredItems,
+    groupedItems,
+    isLoading,
+    searchTerm,
+    setSearchTerm
   } = useAnaliseDeCompraData();
-  
+
   const { handleExportAnaliseDeCompra } = useAnaliseDeCompraExport();
 
   const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -32,14 +32,14 @@ const BluebayAdmAnaliseDeCompra = () => {
 
   return (
     <main className="container-fluid p-0 max-w-full">
-      <BluebayAdmBanner />
+
       <BluebayAdmMenu />
-      
+
       <div className="container mx-auto px-4 py-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-primary">Análise de Compra</h1>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => handleExportAnaliseDeCompra(groupedItems, filteredItems)}
             disabled={isLoading || filteredItems.length === 0}
             className="flex items-center gap-2"
@@ -50,14 +50,14 @@ const BluebayAdmAnaliseDeCompra = () => {
         </div>
 
         {/* Search Filter */}
-        <AnaliseDeCompraSearchFilter 
-          searchTerm={searchTerm} 
-          onSearchChange={handleSearchChange} 
+        <AnaliseDeCompraSearchFilter
+          searchTerm={searchTerm}
+          onSearchChange={handleSearchChange}
         />
 
         {/* Summary Cards */}
         {!isLoading && filteredItems.length > 0 && (
-          <AnaliseDeCompraSummaryCards 
+          <AnaliseDeCompraSummaryCards
             totalGroups={totalGroups}
             totalItems={totalItems}
             totalPhysicalStock={totalPhysicalStock}

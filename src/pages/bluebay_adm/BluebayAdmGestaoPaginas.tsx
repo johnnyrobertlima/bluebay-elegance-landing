@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { BluebayAdmMenu } from "@/components/bluebay_adm/BluebayAdmMenu";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -168,165 +169,169 @@ const BluebayAdmGestaoPaginas = () => {
     };
 
     return (
-        <div className="container mx-auto py-8 px-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold flex items-center gap-2">
-                        <Layout className="h-8 w-8 text-primary" />
-                        Gestão de Páginas
-                    </h1>
-                    <p className="text-muted-foreground">Registre todas as rotas e organize a hierarquia do menu</p>
+        <div className="container-fluid p-0">
+            <BluebayAdmMenu />
+            <div className="container mx-auto py-8 px-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                    <div>
+                        <h1 className="text-3xl font-bold flex items-center gap-2">
+                            <Layout className="h-8 w-8 text-primary" />
+                            Gestão de Páginas
+                        </h1>
+                        <p className="text-muted-foreground">Registre todas as rotas e organize a hierarquia do menu</p>
+                    </div>
+                    <Button onClick={() => handleOpenDialog()}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nova Página
+                    </Button>
                 </div>
-                <Button onClick={() => handleOpenDialog()}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nova Página
-                </Button>
-            </div>
 
-            <Card className="mb-6">
-                <CardContent className="pt-6">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Buscar por nome ou caminho..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10"
-                        />
-                    </div>
-                </CardContent>
-            </Card>
+                <Card className="mb-6">
+                    <CardContent className="pt-6">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Buscar por nome ou caminho..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-10"
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
 
-            <Card>
-                <CardContent className="p-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Nome</TableHead>
-                                <TableHead>Caminho (Path)</TableHead>
-                                <TableHead>Item Pai</TableHead>
-                                <TableHead className="w-[100px]">Status</TableHead>
-                                <TableHead className="w-[100px] text-right">Ações</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? (
-                                Array.from({ length: 5 }).map((_, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                                        <TableCell><Skeleton className="h-4 w-48" /></TableCell>
-                                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                                        <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                                        <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
-                                    </TableRow>
-                                ))
-                            ) : filteredPages.length === 0 ? (
+                <Card>
+                    <CardContent className="p-0">
+                        <Table>
+                            <TableHeader>
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                                        Nenhuma página encontrada.
-                                    </TableCell>
+                                    <TableHead>Nome</TableHead>
+                                    <TableHead>Caminho (Path)</TableHead>
+                                    <TableHead>Item Pai</TableHead>
+                                    <TableHead className="w-[100px]">Status</TableHead>
+                                    <TableHead className="w-[100px] text-right">Ações</TableHead>
                                 </TableRow>
-                            ) : (
-                                filteredPages.map((page) => (
-                                    <TableRow key={page.id} className={!page.parent_id ? "bg-muted/30 font-semibold" : ""}>
-                                        <TableCell className="flex items-center gap-2">
-                                            {page.parent_id && <ChevronRight className="h-3 w-3 text-muted-foreground" />}
-                                            <div className="flex items-center gap-2">
-                                                {page.icon && <span className="text-muted-foreground text-xs">[{page.icon}]</span>}
-                                                {page.name}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="font-mono text-xs">{page.path}</TableCell>
-                                        <TableCell>{getParentName(page.parent_id)}</TableCell>
-                                        <TableCell>
-                                            <span className={`px-2 py-1 rounded-full text-[10px] ${page.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                                                {page.is_active ? "Ativo" : "Inativo"}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(page)}>
-                                                <Pencil className="h-4 w-4" />
-                                            </Button>
+                            </TableHeader>
+                            <TableBody>
+                                {isLoading ? (
+                                    Array.from({ length: 5 }).map((_, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                                            <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : filteredPages.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                                            Nenhuma página encontrada.
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+                                ) : (
+                                    filteredPages.map((page) => (
+                                        <TableRow key={page.id} className={!page.parent_id ? "bg-muted/30 font-semibold" : ""}>
+                                            <TableCell className="flex items-center gap-2">
+                                                {page.parent_id && <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+                                                <div className="flex items-center gap-2">
+                                                    {page.icon && <span className="text-muted-foreground text-xs">[{page.icon}]</span>}
+                                                    {page.name}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="font-mono text-xs">{page.path}</TableCell>
+                                            <TableCell>{getParentName(page.parent_id)}</TableCell>
+                                            <TableCell>
+                                                <span className={`px-2 py-1 rounded-full text-[10px] ${page.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                                                    {page.is_active ? "Ativo" : "Inativo"}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(page)}>
+                                                    <Pencil className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
 
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>{selectedPage ? "Editar Página" : "Nova Página"}</DialogTitle>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="name">Nome da Página</Label>
-                            <Input
-                                id="name"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                placeholder="Ex: Dashboard Comercial"
-                            />
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>{selectedPage ? "Editar Página" : "Nova Página"}</DialogTitle>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="name">Nome da Página</Label>
+                                <Input
+                                    id="name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    placeholder="Ex: Dashboard Comercial"
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="path">Caminho (URL Path)</Label>
+                                <Input
+                                    id="path"
+                                    value={formData.path}
+                                    onChange={(e) => setFormData({ ...formData, path: e.target.value })}
+                                    placeholder="Ex: /client-area/bluebay_adm/dashboard"
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="icon">Ícone (Nome Lucide)</Label>
+                                <Input
+                                    id="icon"
+                                    value={formData.icon}
+                                    onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                                    placeholder="Ex: BarChart, Users, Settings"
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="parent">Item Pai (Para Menu)</Label>
+                                <Select
+                                    value={formData.parent_id}
+                                    onValueChange={(v) => setFormData({ ...formData, parent_id: v })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione o pai..." />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-white dark:bg-slate-950">
+                                        <SelectItem value="none">Nenhum (Item Raiz)</SelectItem>
+                                        {pages
+                                            .filter((p) => !p.parent_id && p.id !== selectedPage?.id)
+                                            .map((p) => (
+                                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                            ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Switch
+                                    id="is_active"
+                                    checked={formData.is_active}
+                                    onCheckedChange={(v) => setFormData({ ...formData, is_active: v })}
+                                />
+                                <Label htmlFor="is_active">Página Ativa</Label>
+                            </div>
                         </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="path">Caminho (URL Path)</Label>
-                            <Input
-                                id="path"
-                                value={formData.path}
-                                onChange={(e) => setFormData({ ...formData, path: e.target.value })}
-                                placeholder="Ex: /client-area/bluebay_adm/dashboard"
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="icon">Ícone (Nome Lucide)</Label>
-                            <Input
-                                id="icon"
-                                value={formData.icon}
-                                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                                placeholder="Ex: BarChart, Users, Settings"
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="parent">Item Pai (Para Menu)</Label>
-                            <Select
-                                value={formData.parent_id}
-                                onValueChange={(v) => setFormData({ ...formData, parent_id: v })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecione o pai..." />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white dark:bg-slate-950">
-                                    <SelectItem value="none">Nenhum (Item Raiz)</SelectItem>
-                                    {pages
-                                        .filter((p) => !p.parent_id && p.id !== selectedPage?.id)
-                                        .map((p) => (
-                                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                        ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Switch
-                                id="is_active"
-                                checked={formData.is_active}
-                                onCheckedChange={(v) => setFormData({ ...formData, is_active: v })}
-                            />
-                            <Label htmlFor="is_active">Página Ativa</Label>
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleSave} disabled={isSaving}>
-                            {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                            Salvar
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                            <Button onClick={handleSave} disabled={isSaving}>
+                                {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                                Salvar
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </div>
         </div>
+
     );
 };
 

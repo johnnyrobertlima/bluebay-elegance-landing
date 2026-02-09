@@ -251,12 +251,23 @@ export const uploadProductImage = async (file: File): Promise<string | null> => 
 };
 
 /**
- * Upload product image to Supabase Storage
+ * Fetch next available CODIGOAUX
  */
+export const fetchNextCodigoAux = async (): Promise<string | null> => {
+  try {
+    const { data, error } = await supabase.rpc('get_next_codigoaux');
 
+    if (error) {
+      console.error("Error fetching next codigoaux:", error);
+      return null;
+    }
 
-
-
+    return data as string;
+  } catch (error) {
+    console.error("Error in fetchNextCodigoAux:", error);
+    return null;
+  }
+};
 
 /**
  * Bulk update items based on ITEM_CODIGO

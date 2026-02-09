@@ -7,16 +7,16 @@ DECLARE
 BEGIN
     -- Find the highest existing numeric code, default to 9999 (so next is 10000)
     -- We filter for only numeric strings using regex to avoid errors with potential alphanumeric legacy codes
-    SELECT COALESCE(MAX(NULLIF(regexp_replace(CODIGOAUX, '[^0-9]', '', 'g'), '')::BIGINT), 9999)
+    SELECT COALESCE(MAX(NULLIF(regexp_replace(CODIGOAUX, '[^0-9]', '', 'g'), '')::BIGINT), 99999)
     INTO next_code
     FROM "BLUEBAY_ITEM"
-    WHERE CODIGOAUX ~ '^[0-9]+$';
+    WHERE CODIGOAUX ~ '^[0-9]+$' AND TRIM(CODIGOAUX) <> TRIM(CAST("ITEM_CODIGO" AS TEXT)) AND TRIM(CODIGOAUX) <> '0';
 
     -- Iterate over items with empty CODIGOAUX
     FOR r IN
         SELECT "ITEM_CODIGO"
         FROM "BLUEBAY_ITEM"
-        WHERE CODIGOAUX IS NULL OR TRIM(CODIGOAUX) = ''
+        WHERE CODIGOAUX IS NULL OR TRIM(CODIGOAUX) = '' OR TRIM(CODIGOAUX) = '0' OR TRIM(CODIGOAUX) = TRIM(CAST("ITEM_CODIGO" AS TEXT))
         ORDER BY "ITEM_CODIGO" -- Deterministic order ensures stability
     LOOP
         next_code := next_code + 1;
