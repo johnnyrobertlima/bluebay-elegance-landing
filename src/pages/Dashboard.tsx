@@ -8,10 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, Package, Heart, Calendar, Phone, Building2, Mail, Trash2, Pencil } from 'lucide-react';
+import { User, Package, FileText, CheckCircle2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-// Local types since these tables may not exist in the schema
+import { format } from "date-fns";
+import { ptBR } from 'date-fns/locale';
+
+// Types
 interface Profile {
   id: string;
   full_name: string | null;
@@ -19,53 +22,46 @@ interface Profile {
   company_name: string | null;
   phone: string | null;
   created_at: string;
+  linked_client_type?: 'CNPJ' | 'CATEGORY' | 'NONE';
+  linked_client_value?: string;
 }
 
-interface Product {
-  id: string;
-  name: string;
-  price: number | null;
-  image_url: string | null;
+interface ClientOrder {
+  PED_NUMPEDIDO: string;
+  PES_CODIGO: number;
+  TOTAL_PRODUTO: number | null;
+  STATUS: string | null;
+  DATA_PEDIDO: string | null;
+  client_name?: string;
 }
 
-interface FavoriteWithProduct {
-  id: string;
-  user_id: string;
-  product_id: string;
-  created_at: string;
-  products: Product | null;
+interface ClientTitle {
+  NUMDOCUMENTO: string | null;
+  PES_CODIGO: string | null;
+  VLRTITULO: number | null;
+  NUMNOTA: number | null;
+  STATUS: string | null;
+  DTVENCIMENTO: string | null;
+  client_name?: string;
 }
 
-interface OrderWithItems {
-  id: string;
-  user_id: string;
-  status: string;
-  total: number;
-  created_at: string;
-  order_items: {
-    id: string;
-    quantity: number;
-    unit_price: number;
-    products: Product | null;
-  }[];
+interface ClientInvoice {
+  NOTA: string | null;
+  PES_CODIGO: number | null;
+  VALOR_NOTA: number | null;
+  DATA_EMISSAO: string | null;
+  client_name?: string;
 }
 
 const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  confirmed: 'bg-blue-100 text-blue-800 border-blue-200',
-  processing: 'bg-purple-100 text-purple-800 border-purple-200',
-  shipped: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-  delivered: 'bg-green-100 text-green-800 border-green-200',
-  cancelled: 'bg-red-100 text-red-800 border-red-200',
-};
-
-const statusLabels: Record<string, string> = {
-  pending: 'Pendente',
-  confirmed: 'Confirmado',
-  processing: 'Processando',
-  shipped: 'Enviado',
-  delivered: 'Entregue',
-  cancelled: 'Cancelado',
+  'PENDENTE': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  'CONFIRMADO': 'bg-blue-100 text-blue-800 border-blue-200',
+  'PROCESSANDO': 'bg-purple-100 text-purple-800 border-purple-200',
+  'ENVIADO': 'bg-indigo-100 text-indigo-800 border-indigo-200',
+  'ENTREGUE': 'bg-green-100 text-green-800 border-green-200',
+  'CANCELADO': 'bg-red-100 text-red-800 border-red-200',
+  'ABERTO': 'bg-blue-100 text-blue-800 border-blue-200',
+  'PAGO': 'bg-green-100 text-green-800 border-green-200',
 };
 
 export default function Dashboard() {
@@ -74,317 +70,257 @@ export default function Dashboard() {
   const { toast } = useToast();
 
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [orders, setOrders] = useState<OrderWithItems[]>([]);
-  const [favorites, setFavorites] = useState<FavoriteWithProduct[]>([]);
+  const [orders, setOrders] = useState<ClientOrder[]>([]);
+  const [titles, setTitles] = useState<ClientTitle[]>([]);
+  const [invoices, setInvoices] = useState<ClientInvoice[]>([]);
+  const [expandedSection, setExpandedSection] = useState<{
+    orders: boolean;
+    titles: boolean;
+    invoices: boolean;
+  }>({
+    orders: false,
+    titles: false,
+    invoices: false,
+  });
+
+  const toggleSection = (section: 'orders' | 'titles' | 'invoices') => {
+    setExpandedSection(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/auth');
-    }
+    if (!authLoading && !user) navigate('/auth');
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (user) {
-      fetchDashboardData();
-    }
+    if (user) fetchDashboardData();
   }, [user]);
 
   const fetchDashboardData = async () => {
     if (!user) return;
-
     setLoading(true);
     try {
-      const [profileRes, ordersRes, favoritesRes] = await Promise.all([
-        (supabase as any).from('profiles').select('*').eq('id', user.id).maybeSingle(),
-        (supabase as any)
-          .from('orders')
-          .select(`
-            *,
-            order_items (
-              id,
-              quantity,
-              unit_price,
-              products (*)
-            )
-          `)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(5),
-        (supabase as any)
-          .from('favorites')
-          .select(`
-            *,
-            products (*)
-          `)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false }),
-      ]);
+      const { data: profileData, error: profileError } = await (supabase as any)
+        .from('profiles').select('*').eq('id', user.id).maybeSingle();
 
-      if (profileRes.data) setProfile(profileRes.data as Profile);
-      if (ordersRes.data) setOrders(ordersRes.data as OrderWithItems[]);
-      if (favoritesRes.data) setFavorites(favoritesRes.data as FavoriteWithProduct[]);
+      if (profileError) throw profileError;
+      setProfile(profileData as Profile);
+
+      let clientIds: number[] = [];
+      let clientNamesMap: Record<string, string> = {};
+      let isRestricted = false;
+
+      // 1. Determine Restriction
+      if (profileData?.linked_client_type === 'CNPJ' && profileData.linked_client_value) {
+        isRestricted = true;
+        const { data: clientData } = await (supabase as any)
+          .from('BLUEBAY_PESSOA')
+          .select('PES_CODIGO, RAZAOSOCIAL, CNPJCPF')
+          .or(`CNPJCPF.eq.${profileData.linked_client_value},PES_CODIGO.eq.${profileData.linked_client_value}`)
+          .maybeSingle();
+
+        if (clientData) {
+          clientIds = [clientData.PES_CODIGO];
+          clientNamesMap[clientData.PES_CODIGO] = clientData.RAZAOSOCIAL || 'Cliente';
+        }
+      } else if (profileData?.linked_client_type === 'CATEGORY' && profileData.linked_client_value) {
+        isRestricted = true;
+        const { data: clientsInCategory } = await (supabase as any)
+          .from('BLUEBAY_PESSOA')
+          .select('PES_CODIGO, RAZAOSOCIAL')
+          .eq('NOME_CATEGORIA', profileData.linked_client_value);
+
+        if (clientsInCategory) {
+          clientIds = clientsInCategory.map((c: any) => c.PES_CODIGO);
+          clientsInCategory.forEach((c: any) => {
+            clientNamesMap[c.PES_CODIGO] = c.RAZAOSOCIAL || 'Cliente';
+          });
+        }
+      }
+
+      // 2. Fetch Data
+      if (isRestricted) {
+        // Restricted User: Fetch only for their Client IDs
+        if (clientIds.length > 0) {
+          const [ordersRes, titlesRes, invoicesRes] = await Promise.all([
+            (supabase as any).from('BLUEBAY_PEDIDO').select('PED_NUMPEDIDO, PES_CODIGO, TOTAL_PRODUTO, STATUS, DATA_PEDIDO').in('PES_CODIGO', clientIds).order('DATA_PEDIDO', { ascending: false }).limit(20),
+            (supabase as any).from('BLUEBAY_TITULO').select('NUMDOCUMENTO, PES_CODIGO, VLRTITULO, NUMNOTA, STATUS, DTVENCIMENTO').in('PES_CODIGO', clientIds.map(String)).order('DTVENCIMENTO', { ascending: false }).limit(20),
+            (supabase as any).from('BLUEBAY_FATURAMENTO').select('NOTA, PES_CODIGO, VALOR_NOTA, DATA_EMISSAO').in('PES_CODIGO', clientIds).order('DATA_EMISSAO', { ascending: false }).limit(20)
+          ]);
+
+          if (ordersRes.data) setOrders(ordersRes.data.map((o: any) => ({ ...o, client_name: clientNamesMap[o.PES_CODIGO] })));
+          if (titlesRes.data) setTitles(titlesRes.data.map((t: any) => ({ ...t, client_name: clientNamesMap[String(t.PES_CODIGO)] || clientNamesMap[Number(t.PES_CODIGO)] })));
+          if (invoicesRes.data) setInvoices(invoicesRes.data.map((i: any) => ({ ...i, client_name: clientNamesMap[i.PES_CODIGO] })));
+        }
+      } else {
+        // Admin or Unrestricted: Fetch ALL latest
+        const [ordersRes, titlesRes, invoicesRes] = await Promise.all([
+          (supabase as any).from('BLUEBAY_PEDIDO').select('PED_NUMPEDIDO, PES_CODIGO, TOTAL_PRODUTO, STATUS, DATA_PEDIDO').order('DATA_PEDIDO', { ascending: false }).limit(20),
+          (supabase as any).from('BLUEBAY_TITULO').select('NUMDOCUMENTO, PES_CODIGO, VLRTITULO, NUMNOTA, STATUS, DTVENCIMENTO').order('DTVENCIMENTO', { ascending: false }).limit(20),
+          (supabase as any).from('BLUEBAY_FATURAMENTO').select('NOTA, PES_CODIGO, VALOR_NOTA, DATA_EMISSAO').order('DATA_EMISSAO', { ascending: false }).limit(20)
+        ]);
+
+        // Collect distinct PES_CODIGO to fetch names
+        const distinctClientIds = new Set<string>();
+        ordersRes.data?.forEach((o: any) => { if (o.PES_CODIGO) distinctClientIds.add(String(o.PES_CODIGO)); });
+        titlesRes.data?.forEach((t: any) => { if (t.PES_CODIGO) distinctClientIds.add(String(t.PES_CODIGO)); });
+        invoicesRes.data?.forEach((i: any) => { if (i.PES_CODIGO) distinctClientIds.add(String(i.PES_CODIGO)); });
+
+        if (distinctClientIds.size > 0) {
+          const { data: clientsData } = await (supabase as any)
+            .from('BLUEBAY_PESSOA')
+            .select('PES_CODIGO, RAZAOSOCIAL')
+            .in('PES_CODIGO', Array.from(distinctClientIds).map(Number)); // Assuming PES_CODIGO is number
+
+          if (clientsData) {
+            clientsData.forEach((c: any) => {
+              clientNamesMap[c.PES_CODIGO] = c.RAZAOSOCIAL || 'Cliente';
+            });
+          }
+        }
+
+        if (ordersRes.data) setOrders(ordersRes.data.map((o: any) => ({ ...o, client_name: clientNamesMap[o.PES_CODIGO] || o.PES_CODIGO })));
+        if (titlesRes.data) setTitles(titlesRes.data.map((t: any) => ({ ...t, client_name: clientNamesMap[String(t.PES_CODIGO)] || clientNamesMap[Number(t.PES_CODIGO)] || t.PES_CODIGO })));
+        if (invoicesRes.data) setInvoices(invoicesRes.data.map((i: any) => ({ ...i, client_name: clientNamesMap[i.PES_CODIGO] || i.PES_CODIGO })));
+      }
+
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível carregar os dados do painel.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro', description: 'Não foi possível carregar os dados.', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
-  const removeFavorite = async (favoriteId: string) => {
-    try {
-      const { error } = await (supabase as any).from('favorites').delete().eq('id', favoriteId);
-      if (error) throw error;
-      
-      setFavorites(favorites.filter((f) => f.id !== favoriteId));
-      toast({
-        title: 'Removido',
-        description: 'Produto removido dos favoritos.',
-      });
-    } catch (error) {
-      console.error('Error removing favorite:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível remover o favorito.',
-        variant: 'destructive',
-      });
-    }
-  };
+  const formatCurrency = (val: number | null) => val ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val) : 'R$ 0,00';
+  const formatDate = (date: string | null) => date ? format(new Date(date), 'dd/MM/yyyy', { locale: ptBR }) : '-';
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-primary font-display text-xl">Carregando...</div>
-      </div>
-    );
-  }
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-primary font-display text-xl">Carregando...</div></div>;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
-      
       <main className="flex-1 container mx-auto px-4 py-8 md:py-12">
         <div className="mb-8">
-          <h1 className="font-display text-3xl md:text-4xl text-foreground mb-2">
-            Área do Cliente
-          </h1>
-          <p className="text-muted-foreground">
-            Bem-vindo(a) de volta, {profile?.full_name || user?.email}
-          </p>
+          <h1 className="font-display text-3xl md:text-4xl text-foreground mb-2">Área do Cliente</h1>
+          <p className="text-muted-foreground">Bem-vindo(a), {profile?.full_name || user?.email}</p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Profile Card */}
-          <Card className="shadow-card hover:shadow-elegant transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <User className="h-5 w-5 text-primary" />
-                  Meu Perfil
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate('/profile/edit')}
-                  className="h-8 w-8 text-muted-foreground hover:text-primary"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
+          <Card className="shadow-card hover:shadow-elegant transition-shadow h-fit">
+            <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-lg"><User className="h-5 w-5 text-primary" /> Meu Perfil</CardTitle></CardHeader>
             <CardContent>
-              {loading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-16 w-16 rounded-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <Avatar className="h-16 w-16">
-                      <AvatarImage src={profile?.avatar_url || ''} alt={profile?.full_name || 'Avatar'} />
-                      <AvatarFallback className="text-lg bg-primary/10 text-primary">
-                        {profile?.full_name
-                          ? profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-                          : user?.email?.charAt(0).toUpperCase() || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium text-foreground">
-                        {profile?.full_name || 'Nome não informado'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{user?.email}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-2 pt-2 border-t">
-                    {profile?.company_name && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-foreground">{profile.company_name}</span>
-                      </div>
+              {loading ? <Skeleton className="h-12 w-full" /> : (
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-16 w-16">
+                    <AvatarImage src={profile?.avatar_url || ''} />
+                    <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">{profile?.full_name}</p>
+                    <p className="text-sm text-muted-foreground">{user?.email}</p>
+                    {(profile?.linked_client_type === 'CNPJ' || profile?.linked_client_type === 'CATEGORY') && (
+                      <Badge variant="outline" className="mt-1 text-xs">{profile.linked_client_type === 'CNPJ' ? 'Cliente Vinculado' : 'Categoria Vinculada'}</Badge>
                     )}
-                    {profile?.phone && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-foreground">{profile.phone}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        Cliente desde {profile?.created_at ? formatDate(profile.created_at) : '—'}
-                      </span>
-                    </div>
                   </div>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Orders Summary Card */}
-          <Card className="shadow-card hover:shadow-elegant transition-shadow lg:col-span-2">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Package className="h-5 w-5 text-primary" />
-                Histórico de Pedidos
-              </CardTitle>
-            </CardHeader>
+          {/* Orders */}
+          <Card className="shadow-card lg:col-span-2">
+            <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-lg"><Package className="h-5 w-5 text-primary" /> Histórico de Pedidos</CardTitle></CardHeader>
             <CardContent>
-              {loading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                </div>
-              ) : orders.length === 0 ? (
-                <div className="text-center py-8">
-                  <Package className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                  <p className="text-muted-foreground">Você ainda não fez nenhum pedido.</p>
-                  <Button variant="outline" className="mt-4" onClick={() => navigate('/')}>
-                    Explorar Produtos
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {orders.map((order) => (
-                    <div
-                      key={order.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-1">
-                          <span className="text-sm font-medium text-foreground">
-                            Pedido #{order.id.slice(0, 8)}
-                          </span>
-                          <Badge
-                            variant="outline"
-                            className={statusColors[order.status] || 'bg-gray-100 text-gray-800'}
-                          >
-                            {statusLabels[order.status] || order.status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>{formatDate(order.created_at)}</span>
-                          <span>{order.order_items.length} item(s)</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="font-semibold text-foreground">
-                          {formatCurrency(Number(order.total))}
-                        </span>
-                      </div>
+              {loading ? <Skeleton className="h-12 w-full" /> : orders.length === 0 ? <p className="text-center py-4 text-muted-foreground">Nenhum pedido encontrado.</p> : (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-4 text-xs font-semibold text-muted-foreground px-3"><div>Nº PEDIDO</div><div>CLIENTE</div><div className="text-right">VALOR</div><div className="text-right">STATUS</div></div>
+                  {orders.slice(0, expandedSection.orders ? undefined : 5).map((o, i) => (
+                    <div key={i} className="grid grid-cols-4 items-center p-3 rounded-lg bg-muted/30 text-sm">
+                      <div className="font-medium">{o.PED_NUMPEDIDO}</div>
+                      <div className="truncate" title={o.client_name}>{o.client_name || o.PES_CODIGO}</div>
+                      <div className="text-right font-medium">{formatCurrency(o.TOTAL_PRODUTO)}</div>
+                      <div className="text-right"><Badge variant="outline" className={statusColors[o.STATUS?.toUpperCase() || '']}>{o.STATUS}</Badge></div>
                     </div>
                   ))}
+                  {orders.length > 5 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full mt-2 text-muted-foreground hover:text-primary"
+                      onClick={() => toggleSection('orders')}
+                    >
+                      {expandedSection.orders ? 'Ver menos' : `Ver mais (${orders.length - 5} restantes)`}
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Favorites Card */}
-          <Card className="shadow-card hover:shadow-elegant transition-shadow md:col-span-2 lg:col-span-3">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Heart className="h-5 w-5 text-primary" />
-                Meus Favoritos
-              </CardTitle>
-            </CardHeader>
+          {/* Titles */}
+          <Card className="shadow-card md:col-span-2 lg:col-span-3">
+            <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-lg"><FileText className="h-5 w-5 text-primary" /> Meus Títulos</CardTitle></CardHeader>
             <CardContent>
-              {loading ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  {[1, 2, 3, 4].map((i) => (
-                    <Skeleton key={i} className="h-32 w-full rounded-lg" />
-                  ))}
-                </div>
-              ) : favorites.length === 0 ? (
-                <div className="text-center py-8">
-                  <Heart className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                  <p className="text-muted-foreground">Você ainda não tem produtos favoritos.</p>
-                  <Button variant="outline" className="mt-4" onClick={() => navigate('/')}>
-                    Descobrir Produtos
-                  </Button>
-                </div>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  {favorites.map((favorite) => (
-                    <div
-                      key={favorite.id}
-                      className="group relative rounded-lg border bg-card p-4 hover:shadow-card transition-all"
-                    >
-                      {favorite.products?.image_url && (
-                        <div className="aspect-square mb-3 rounded-md overflow-hidden bg-muted">
-                          <img
-                            src={favorite.products.image_url}
-                            alt={favorite.products.name}
-                            className="h-full w-full object-cover group-hover:scale-105 transition-transform"
-                          />
-                        </div>
-                      )}
-                      <h4 className="font-medium text-sm text-foreground truncate">
-                        {favorite.products?.name || 'Produto indisponível'}
-                      </h4>
-                      {favorite.products?.price && (
-                        <p className="text-sm text-primary font-semibold mt-1">
-                          {formatCurrency(Number(favorite.products.price))}
-                        </p>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => removeFavorite(favorite.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+              {loading ? <Skeleton className="h-12 w-full" /> : titles.length === 0 ? <p className="text-center py-4 text-muted-foreground">Nenhum título encontrado.</p> : (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-5 text-xs font-semibold text-muted-foreground px-3"><div>CLIENTE</div><div>DOC</div><div>NOTA</div><div className="text-right">VALOR</div><div className="text-right">STATUS</div></div>
+                  {titles.slice(0, expandedSection.titles ? undefined : 5).map((t, i) => (
+                    <div key={i} className="grid grid-cols-5 items-center p-3 rounded-lg bg-muted/30 text-sm">
+                      <div className="truncate" title={t.client_name}>{t.client_name || t.PES_CODIGO}</div>
+                      <div>{t.NUMDOCUMENTO}</div>
+                      <div>{t.NUMNOTA}</div>
+                      <div className="text-right font-medium">{formatCurrency(t.VLRTITULO)}</div>
+                      <div className="text-right"><Badge variant="outline" className={statusColors[t.STATUS?.toUpperCase() || '']}>{t.STATUS}</Badge></div>
                     </div>
                   ))}
+                  {titles.length > 5 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full mt-2 text-muted-foreground hover:text-primary"
+                      onClick={() => toggleSection('titles')}
+                    >
+                      {expandedSection.titles ? 'Ver menos' : `Ver mais (${titles.length - 5} restantes)`}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Invoices */}
+          <Card className="shadow-card md:col-span-2 lg:col-span-3">
+            <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-lg"><CheckCircle2 className="h-5 w-5 text-primary" /> Meus Faturamentos</CardTitle></CardHeader>
+            <CardContent>
+              {loading ? <Skeleton className="h-12 w-full" /> : invoices.length === 0 ? <p className="text-center py-4 text-muted-foreground">Nenhum faturamento encontrado.</p> : (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-3 text-xs font-semibold text-muted-foreground px-3"><div>NOTA</div><div>CLIENTE</div><div className="text-right">VALOR</div></div>
+                  {invoices.slice(0, expandedSection.invoices ? undefined : 5).map((inv, i) => (
+                    <div key={i} className="grid grid-cols-3 items-center p-3 rounded-lg bg-muted/30 text-sm">
+                      <div>{inv.NOTA}</div>
+                      <div className="truncate" title={inv.client_name}>{inv.client_name || inv.PES_CODIGO}</div>
+                      <div className="text-right font-medium text-green-700">{formatCurrency(inv.VALOR_NOTA)}</div>
+                    </div>
+                  ))}
+                  {invoices.length > 5 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full mt-2 text-muted-foreground hover:text-primary"
+                      onClick={() => toggleSection('invoices')}
+                    >
+                      {expandedSection.invoices ? 'Ver menos' : `Ver mais (${invoices.length - 5} restantes)`}
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
       </main>
-
       <Footer />
     </div>
   );

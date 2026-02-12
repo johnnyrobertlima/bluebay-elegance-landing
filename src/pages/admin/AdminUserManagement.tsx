@@ -26,6 +26,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, ArrowLeft, Users, UserX, UserCheck, Ban, Trash2, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { UserAccessDialog } from "@/components/bluebay_adm/users/UserAccessDialog";
 
 interface Profile {
     id: string;
@@ -73,6 +74,16 @@ const AdminUserManagement = () => {
     }, [user, isAdmin]);
 
     const [screenSecurity, setScreenSecurity] = useState(true);
+
+    const [userAccessDialog, setUserAccessDialog] = useState<{ isOpen: boolean; userId: string | null; userName: string | null }>({
+        isOpen: false,
+        userId: null,
+        userName: null
+    });
+
+    const handleAccessSuccess = () => {
+        loadData();
+    };
 
     const loadData = async () => {
         try {
@@ -467,6 +478,15 @@ const AdminUserManagement = () => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
+                                        onClick={() => setUserAccessDialog({ isOpen: true, userId: user.id, userName: user.full_name })}
+                                        title="Vincular a Cliente/Categoria"
+                                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                    >
+                                        <Users className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
                                         onClick={() => handleToggleHide(user)}
                                         disabled={isTogglingHide === user.id}
                                         title={user.is_hidden ? "Mostrar na lista" : "Ocultar da lista"}
@@ -647,6 +667,14 @@ const AdminUserManagement = () => {
                     </CardContent>
                 </Card>
             </div>
+
+            <UserAccessDialog
+                isOpen={userAccessDialog.isOpen}
+                onClose={() => setUserAccessDialog(prev => ({ ...prev, isOpen: false }))}
+                userId={userAccessDialog.userId}
+                userName={userAccessDialog.userName}
+                onSuccess={handleAccessSuccess}
+            />
         </div>
     );
 };

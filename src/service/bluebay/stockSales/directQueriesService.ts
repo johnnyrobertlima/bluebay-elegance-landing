@@ -12,18 +12,21 @@ import { fetchStockSalesWithPagination } from "./queries/fallbackQueries";
  */
 export const fallbackToDirectQueries = async (
   startDate: string,
-  endDate: string
+  endDate: string,
+  searchTerms?: string[],
+  groupFilter?: string,
+  companyFilter?: string
 ): Promise<StockItem[]> => {
   try {
-    console.log("Tentando consultas diretas após falha no RPC");
-    
+    console.log("Tentando consultas diretas após falha no RPC", { searchTerms });
+
     try {
       // First strategy: Direct queries with batching
       console.log("Estratégia 1: Consultas diretas com batching");
-      return await directQueriesFunction(startDate, endDate);
+      return await directQueriesFunction(startDate, endDate, searchTerms, groupFilter, companyFilter);
     } catch (directError) {
       console.error("Falha na estratégia de consultas diretas:", directError);
-      
+
       // Second strategy: Paginated queries
       console.log("Estratégia 2: Tentando abordagem alternativa com paginação");
       return await fetchStockSalesWithPagination(startDate, endDate);

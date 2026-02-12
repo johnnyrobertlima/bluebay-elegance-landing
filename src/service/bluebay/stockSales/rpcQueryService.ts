@@ -65,7 +65,7 @@ export const fetchStockSalesViaRpc = async (
     return processRpcResult(allData);
   } catch (error) {
     handleApiError("Erro ao carregar dados via RPC", error);
-    return fallbackToDirectQueries(startDate, endDate);
+    return fallbackToDirectQueries(startDate, endDate, searchTerms, groupFilter, companyFilter);
   }
 };
 
